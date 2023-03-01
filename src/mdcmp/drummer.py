@@ -4,8 +4,8 @@ from midiutil import MIDIFile
 from .drummap import DRUMS_R
 from .util import NOTE_TYPE_MAP, NOTE_TYPE_TO_DURATION
 from .exceptions import (
-    BeatsFormatError,
-    BeatsLineError,
+    DrumFormatError,
+    DrumLineError,
     InvalidNoteError,
     DrumNotFoundError,
 )
@@ -263,11 +263,11 @@ class Controller:
             if not i.strip():
                 continue
             if "|" not in i:
-                raise BeatsLineError(f"Invalid line: {i}")
+                raise DrumLineError(f"Invalid line: {i}")
             try:
                 drum, offset, pattern = i.split("|")
             except ValueError:
-                raise BeatsFormatError(f"Invalid format on line: {line_num}")
+                raise DrumFormatError(f"Invalid format on line: {line_num}")
             print(drum, offset, pattern)
             drum_note = _get_drum(drum)
             patterns = pattern.split(";")

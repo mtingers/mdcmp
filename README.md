@@ -4,8 +4,6 @@ mdcmp (MIDI Composer) is a Python package for generating drum and instrument tra
 MIDI files.
 
 **This is a work in progress.**
-# this file describes how to write an composition track
-
 
 # Notes
 

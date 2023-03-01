@@ -1,8 +1,8 @@
-class BeatsLineError(Exception):
+class DrumLineError(Exception):
     """Could not parse a beats line"""
 
 
-class BeatsFormatError(Exception):
+class DrumFormatError(Exception):
     """Could not parse beats data section"""
 
 
