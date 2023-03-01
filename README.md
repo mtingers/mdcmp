@@ -7,7 +7,7 @@ MIDI files.
 
 # Notes
 
-## Notes to timing
+## Timing Notes
 ```
 w = whole -  4
 h = half - 2
@@ -18,7 +18,7 @@ t = thirty-second - 0.125
 0 = skip/0 value - 0.0
 ```
 
-## Composer file format
+## The Composer File Format
 
 
 Format:
@@ -34,7 +34,7 @@ Example format:
 1|100,h,0,100;
 ```
 
-## Drum file format
+## The Drum File Format
 
 Format:
 ```
