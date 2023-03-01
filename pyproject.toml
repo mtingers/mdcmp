@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mdcmp"
+authors = [
+    {name = "Matth Ingersoll", email = "matth@mtingers.com"},
+]
+description = "MIDI Composer"
+requires-python = ">=3.10"
+keywords = ["MIDI", "Music", "Generative"]
+license = {text = "BSD-3-Clause"}
+classifiers = [
+    "Programming Language :: Python :: 3",
+]
+dependencies = [
+    "black==23.1.0",
+    "MIDIUtil==1.2.1",
+    "mingus==0.6.1",
+]
+dynamic = ["version"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[project.scripts]
+# generate MIDI file from .drum file
+mdcmp-drummer = "mdcmp.drummer:main"
+# generate MIDI file from .comp file
+mdcmp-composer = "mdcmp.composer:main"
+# generate MIDI file from .comp and .drum file
+mdcmp-combiner = "mdcmp.composer:combiner"
+
+[tool.setuptools.dynamic]
+version = {attr = "mdcmp.VERSION"}
+readme = {file = ["README.md"]}
