@@ -49,17 +49,7 @@ class Generator:
                 [i for i in list(NOTE_TYPE_MAP.keys()) if i in allowed_types]
             )
             velocity = random.randint(0, 100)
-            extra = random.choice(
-                [
-                    "0",
-                    "0",
-                    "0",
-                    "0",
-                    "e",
-                    "s",
-                    "t",
-                ]
-            )
+            extra = random.choice("0000est")
             output += f"{note_type},{extra},{velocity};"
         return output
 
@@ -85,17 +75,7 @@ class Generator:
                         break
 
             velocity = random.randint(0, 100)
-            extra = random.choice(
-                [
-                    "0",
-                    "0",
-                    "0",
-                    "0",
-                    "e",
-                    "s",
-                    "t",
-                ]
-            )
+            extra = random.choice("0000est")
             output += f"{note_type},{extra},{velocity};"
         return output
 
@@ -132,7 +112,7 @@ class Controller:
         track: int = 1,
         tempo: int = 120,
         velocity: int = 50,
-        total_duration: float = 60.,
+        total_duration: float = 60.0,
         midi_obj: MIDIFile | None = None,
     ):
         self.track: int = track
@@ -157,7 +137,7 @@ class Controller:
         # format: start-time-offset|pitch,note,note-additional-time,volume|velocity;...
         # 0|33,q,0,100;
         timer: float = 0.0 + start_offset
-        duration: float = 1.
+        duration: float = 1.0
         increment: float = 0
         for pattern in patterns:
             if not pattern.strip():
@@ -196,9 +176,7 @@ class Controller:
             self._process_composition_pattern(patterns, float(offset))
             self.track += 1
 
-    def process_composition_and_drum_file(
-        self, composition_path: str, drums_path: str
-    ):
+    def process_composition_and_drum_file(self, composition_path: str, drums_path: str):
         """Process a composition and drums file to output together on write() call."""
         self.process_composition_file(composition_path)
         self.drum_controller.process_drum_file(drums_path)

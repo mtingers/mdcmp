@@ -17,7 +17,13 @@ def _get_drum(startswith: str):
     pick: int = -1
     try:
         pick = DRUMS_R[
-            random.choice([i for i in DRUMS_R.keys() if i.startswith(startswith)])
+            random.choice(
+                [
+                    i
+                    for i in DRUMS_R.keys()
+                    if i.startswith(startswith) or i.endswith(startswith)
+                ]
+            )
         ]
     except IndexError:
         raise DrumNotFoundError(f"Unknown drum {startswith}")
@@ -77,7 +83,11 @@ class Generator:
         )
 
     def rng1(
-        self, drum: str, allowed_types: list[str], nitems: int = 1, time_offset: float = 0
+        self,
+        drum: str,
+        allowed_types: list[str],
+        nitems: int = 1,
+        time_offset: float = 0,
     ):
         """Generate a random drums part using w,h,q,e,s"""
         # output = f'{drum}|{random.choice([0, 0, 0, 0, 1, 1, 2])}|'
@@ -87,17 +97,7 @@ class Generator:
                 [i for i in list(NOTE_TYPE_MAP.keys()) if i in allowed_types]
             )
             velocity = random.randint(0, 100)
-            extra = random.choice(
-                [
-                    "0",
-                    "0",
-                    "0",
-                    "0",
-                    "e",
-                    "s",
-                    "t",
-                ]
-            )
+            extra = random.choice("0000est")
             output += f"{note_type},{extra},{velocity};"
         return output
 
@@ -125,17 +125,7 @@ class Generator:
                         break
 
             velocity = random.randint(0, 100)
-            extra = random.choice(
-                [
-                    "0",
-                    "0",
-                    "0",
-                    "0",
-                    "e",
-                    "s",
-                    "t",
-                ]
-            )
+            extra = random.choice("0000est")
             output += f"{note_type},{extra},{velocity};"
         return output
 
