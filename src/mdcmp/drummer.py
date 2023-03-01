@@ -3,6 +3,7 @@ import sys
 from midiutil import MIDIFile
 from .drummap import DRUMS_R
 from .util import NOTE_TYPE_MAP, NOTE_TYPE_TO_DURATION
+from .util import note_to_offset
 from .exceptions import (
     DrumFormatError,
     DrumLineError,
@@ -46,20 +47,20 @@ def drums_to_duration(drums_data: str):
 class Generator:
     """Generate drum file data."""
 
-    def __init__(self, total_duration: int, moods: list[str]):
+    def __init__(self, total_duration: float, moods: list[str]):
         """
         total_duration is the length of the output.
         movements_in_order is a mood describer and how long each mood is.
         This will probably change or moved to a different class and is currently unused.
         """
-        self.total_duration: int = total_duration
+        self.total_duration: float = total_duration
         self.moods: list[str] = moods
         self._gens: list[str] = []
 
-    def _duration_note_to_offset(self, duration: int, note_type: str) -> int:
+    def _duration_note_to_offset(self, duration: float, note_type: str) -> float:
         """Calculate the offset of a note at a duration."""
         m = NOTE_TYPE_TO_DURATION[note_type]
-        duration = int(duration * m)
+        duration = float(duration * m)
         return duration
 
     def gen1(self):
@@ -76,7 +77,7 @@ class Generator:
         )
 
     def rng1(
-        self, drum: str, allowed_types: list[str], nitems: int = 1, time_offset: int = 0
+        self, drum: str, allowed_types: list[str], nitems: int = 1, time_offset: float = 0
     ):
         """Generate a random drums part using w,h,q,e,s"""
         # output = f'{drum}|{random.choice([0, 0, 0, 0, 1, 1, 2])}|'
@@ -191,15 +192,15 @@ class Generator:
     def gen_track(
         self,
         drum: str,
-        duration: int,
+        duration: float,
         note_type: str,
         time_offset: float = 0.0,
         time_extra: int = 0,
         velocity: int = 50,
     ):
         data = f"{drum}|{time_offset}|"
-        duration = self._duration_note_to_offset(duration, note_type)
-        for _ in range(1, duration + 1):
+        duration = note_to_offset(duration, note_type)
+        for _ in range(1, int(duration) + 1):
             data += f"{note_type},{time_extra},{velocity};"
         self._gens.append(data)
 
@@ -217,13 +218,13 @@ class Controller:
         track: int = 1,
         tempo: int = 120,
         velocity: int = 50,
-        total_duration: int = 60,
+        total_duration: float = 60,
         midi_obj: MIDIFile | None = None,
     ):
         self.track: int = track
         self.tempo: int = tempo
         self.velocity: int = velocity
-        self.total_duration: int = total_duration
+        self.total_duration: float = total_duration
         if midi_obj:
             self.midi = midi_obj
         else:
@@ -231,7 +232,7 @@ class Controller:
             self.midi.addTempo(0, 0, self.tempo)
         self.generator = Generator(self.total_duration, [])
 
-    def _process_drums_pattern(
+    def _process_drum_pattern(
         self, patterns: list[str], pitch: int, start_offset: float
     ):
         """Convert a single drum format section to MIDI."""
@@ -255,7 +256,7 @@ class Controller:
             )
             timer += increment
 
-    def process_drums_file(self, path: str):
+    def process_drum_file(self, path: str):
         """Convert a drum formatted file to MIDI."""
         with open(path) as drums_fd:
             data = drums_fd.read().strip().split("\n")
@@ -271,7 +272,7 @@ class Controller:
             print(drum, offset, pattern)
             drum_note = _get_drum(drum)
             patterns = pattern.split(";")
-            self._process_drums_pattern(patterns, drum_note, float(offset))
+            self._process_drum_pattern(patterns, drum_note, float(offset))
 
     def write(self, path: str):
         """Write all tracks stored in self.midi to a MIDI file."""
@@ -284,5 +285,5 @@ def main():
     gen = drummer.generator
     gen.test2()
     gen.write(sys.argv[1])
-    drummer.process_drums_file(sys.argv[1])
+    drummer.process_drum_file(sys.argv[1])
     drummer.write(sys.argv[2])

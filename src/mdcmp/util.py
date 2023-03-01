@@ -18,3 +18,9 @@ NOTE_TYPE_TO_DURATION = {
     "t": 8,
     "0": 0.0,
 }
+
+
+def note_to_offset(duration: float, note_type: str) -> float:
+    """Calculate the offset of a note at a duration."""
+    duration = float(duration * NOTE_TYPE_TO_DURATION[note_type])
+    return duration

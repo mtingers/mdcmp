@@ -1,7 +1,8 @@
 import random
 import sys
 from midiutil import MIDIFile
-from .util import NOTE_TYPE_MAP, NOTE_TYPE_TO_DURATION
+from .util import NOTE_TYPE_MAP
+from .util import note_to_offset
 from .exceptions import ComposerLineError, ComposerFormatError, InvalidNoteError
 from .drummer import Controller as DrumController
 
@@ -27,21 +28,15 @@ def composition_to_duration(composition_data: str):
 class Generator:
     """Generate composer file data."""
 
-    def __init__(self, total_duration: int, moods: list[str]):
+    def __init__(self, total_duration: float, moods: list[str]):
         """
         total_duration is the length of the output.
         movements_in_order is a mood describer and how long each mood is.
         This will probably change or moved to a different class and is currently unused.
         """
-        self.total_duration: int = total_duration
+        self.total_duration: float = total_duration
         self.moods: list[str] = moods
         self._gens: list[str] = []
-
-    def _duration_note_to_offset(self, duration: int, note_type: str) -> int:
-        """Calculate the offset of a note at a duration."""
-        m = NOTE_TYPE_TO_DURATION[note_type]
-        duration = int(duration * m)
-        return duration
 
     def gen1(self):
         pass
@@ -106,10 +101,10 @@ class Generator:
 
     def gen_track(
         self,
-        duration: int,
+        duration: float,
         note_type: str,
         time_offset: float = 0.0,
-        time_extra: int = 0,
+        time_extra: float = 0,
         velocity: int = 50,
     ):
         """
@@ -118,8 +113,8 @@ class Generator:
         This can be useful for testing or generating a kick or hi-hat that repeats.
         """
         data = f"{time_offset}|"
-        duration = self._duration_note_to_offset(duration, note_type)
-        for _ in range(1, duration + 1):
+        duration = note_to_offset(duration, note_type)
+        for _ in range(1, int(duration) + 1):
             data += f"{note_type},{time_extra},{velocity};"
         self._gens.append(data)
 
@@ -137,13 +132,13 @@ class Controller:
         track: int = 1,
         tempo: int = 120,
         velocity: int = 50,
-        total_duration: int = 60,
+        total_duration: float = 60.,
         midi_obj: MIDIFile | None = None,
     ):
         self.track: int = track
         self.tempo: int = tempo
         self.velocity: int = velocity
-        self.total_duration: int = total_duration
+        self.total_duration: float = total_duration
         if midi_obj:
             self.midi = midi_obj
         else:
@@ -161,9 +156,9 @@ class Controller:
         """Convert a single line of the composer format data to midi."""
         # format: start-time-offset|pitch,note,note-additional-time,volume|velocity;...
         # 0|33,q,0,100;
-        timer = 0.0 + start_offset
-        duration = 1
-        increment = 0
+        timer: float = 0.0 + start_offset
+        duration: float = 1.
+        increment: float = 0
         for pattern in patterns:
             if not pattern.strip():
                 continue
@@ -201,12 +196,12 @@ class Controller:
             self._process_composition_pattern(patterns, float(offset))
             self.track += 1
 
-    def process_composition_and_beats_file(
-        self, composition_path: str, beats_path: str
+    def process_composition_and_drum_file(
+        self, composition_path: str, drums_path: str
     ):
-        """Process a composition and beats file to output together on write() call."""
+        """Process a composition and drums file to output together on write() call."""
         self.process_composition_file(composition_path)
-        self.drum_controller.process_beats_file(beats_path)
+        self.drum_controller.process_drum_file(drums_path)
 
     def write(self, path: str):
         """Write all tracks stored in self.midi to a MIDI file."""
@@ -226,5 +221,5 @@ def main():
 def combiner():
     # TODO: add argparser
     controller = Controller(tempo=60, total_duration=120)
-    controller.process_composition_and_beats_file(sys.argv[1], sys.argv[2])
+    controller.process_composition_and_drum_file(sys.argv[1], sys.argv[2])
     controller.write(sys.argv[3])
