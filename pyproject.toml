@@ -31,6 +31,8 @@ mdcmp-drummer = "mdcmp.drummer:main"
 mdcmp-composer = "mdcmp.composer:main"
 # generate MIDI file from .comp and .drum file
 mdcmp-combiner = "mdcmp.composer:combiner"
+# Main CLI program
+mdcmp = "mdcmp.cli:cli"
 
 [tool.setuptools.dynamic]
 version = {attr = "mdcmp.VERSION"}
