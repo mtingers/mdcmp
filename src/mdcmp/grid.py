@@ -3,17 +3,25 @@ The goal of Grid() is to provide an easy way to generate and layer tracks of dif
 produce an MCD data file for processing.
 
 Key features:
-    - Layer multiple notes at one bar beat
-    - Layer multiple tracks at one bar beat
-    - Control multiple tracks at the same point in time
+    - Layer multiple notes at one bar beat.
+    - Layer multiple tracks on top of each other.
+    - Easily copy and repeat bars.
 
-Important notes:
+Notes:
     - If bars 1,2 and 5 are created, the generated output will be a full rest/blank bar for bar 3-4.
     - Notes are either classified as "drum" or "pitch".
     - Note classification checks if value matches a drum name and uses the drum.  Otherwise, it will
-      attempt to translate the note or chord into a series of midi pitches.
+      attempt to translate the note or chord into a series of midi pitches when generating the MDC
+      data file.
 
-Below is a diagram of how these are layered using a drum and instrument composition:
+Granularity notes:
+When a grid is initially defined, it has a set granularity related to a type of note (e.g. whole,
+half, quarter, eighth, sixteenth, or thirtysecond).  A bar will have N beats based off of this
+granularity.  For example, a granularity of whole note only has 1 beat per bar, where a granularity
+of quarter note has 4, and eighth has 8 beats.
+
+
+Below is a diagram of how these are layered using a drum and instrument combeat:
 
     #######################################################
     track-1:               bar-1            bar-2
@@ -36,15 +44,15 @@ Below is a diagram of how these are layered using a drum and instrument composit
     track-2:      +-----------------------------------+
     #######################################################
 
-    grid.chord_spread(value='Cm7', track=3, start_bar=1, start_position=1, spacer=1)
-    # grid.silence(positions=[7], bars=[2], duration=2, tracks=[2,3]) # maybe?
+    grid.chord_spread(value='Cm7', track=3, start_bar=1, start_beat=1, spacer=1)
+    # grid.silence(beats=[7], bars=[2], duration=2, tracks=[2,3]) # maybe?
     grid.save('/path/save.mdc')
     raw_mdc_data = grid.data()
     # maybe? grid.reshape(Granularity.SIXTEENTH)
     grid = {
         0: {                            <-- bar
             0:                          <-- track
-            [                           <-- position
+            [                           <-- beat
                 {                       <-- metadata
                     'velocity': N,
                     'duration': N,
@@ -58,23 +66,41 @@ from enum import Enum
 from typing import Any
 from .util import NOTE_TYPE_TO_DURATION
 
+# The wildcard pattern
+WILDCARD = -1
+
 
 class Granularity(Enum):
-    WHOLE = 'w'
-    HALF = 'h'
-    QUARTER = 'q'
-    EIGHTH = 'e'
-    SIXTEENTH = 's'
-    THIRTYSECOND = 't'
+    WHOLE = "w"
+    HALF = "h"
+    QUARTER = "q"
+    EIGHTH = "e"
+    SIXTEENTH = "s"
+    THIRTYSECOND = "t"
+
+
+class RequiredArgsGridError(Exception):
+    """One or more required argument has a None value."""
+
+
+class BarIndexGridError(Exception):
+    """Invalid bar index."""
+
+
+class TrackIndexGridError(Exception):
+    """Invalid track index."""
+
+
+class GranularityIndexGridError(Exception):
+    """The specified beat was greater than the granularity of the grid."""
 
 
 class Grid:
-    def __init__(self, granularity:  Granularity = Granularity.EIGHTH):
+    def __init__(self, granularity: Granularity = Granularity.EIGHTH):
         self.granularity: str = granularity.value
-        self.number_of_positions: int = int(NOTE_TYPE_TO_DURATION[self.granularity] * 4)
+        self.number_of_beats: int = int(NOTE_TYPE_TO_DURATION[self.granularity] * 4)
         # self.grid: dict[int, dict[int, dict[str, Any]]] = {}
         self.grid: dict[int, dict[int, list[list[dict[str, Any]]]]] = {}
-        print('DEBUG:', self.granularity, self.number_of_positions)
 
     def copy_to_end(
         self,
@@ -87,16 +113,16 @@ class Grid:
         This one is a doozy.
         """
         if not bars or not tracks:
-            raise Exception('Both bars and tracks must be specified.')
+            raise RequiredArgsGridError("Both bars and tracks parameters must be specified.")
         next_bar_index = max(list(self.grid.keys())) + 1
         for bar in bars:
             tmp = self.grid.get(bar, None)
             if not tmp:
-                raise Exception(f'invalid bar specified: {bar}')
+                raise BarIndexGridError(f"Invalid bar index specified: {bar}")
             for track in tracks:
                 track_tmp = tmp.get(track, None)
                 if not track_tmp:
-                    raise Exception(f'invalid track specified: {track}')
+                    raise TrackIndexGridError(f"Invalid track index specified: {track}")
         # Now copy each bar->track to a new bar at the end
         for _ in range(count):
             for bar in bars:
@@ -107,12 +133,16 @@ class Grid:
                     track_tmp = tmp.get(track)
                     if not track_tmp:
                         continue
-                    for position, data in enumerate(track_tmp):
+                    for beat, data in enumerate(track_tmp):
                         for d in data:
                             self.add(
-                                bars=[next_bar_index], tracks=[track], positions=[position],
-                                value=d['value'], duration=d['duration'],
-                                velocity=d['velocity']
+                                bars=[next_bar_index],
+                                tracks=[track],
+                                beats=[beat],
+                                value=d["value"],
+                                duration=d["duration"],
+                                velocity=d["velocity"],
+                                single_note=d["single_note"],
                             )
                 next_bar_index += 1
 
@@ -120,13 +150,14 @@ class Grid:
         self,
         bars: list[int] | None = None,
         tracks: list[int] | None = None,
-        positions: list[int] | None = None,
-        value: str = '',
+        beats: list[int] | None = None,
+        value: str = "",
         duration: int = 1,
         velocity: int = 50,
+        single_note=False,
     ):
-        if not bars or not tracks or not positions:
-            raise Exception("All parameters must be set")
+        if not bars or not tracks or not beats:
+            raise RequiredArgsGridError("bars, tracks, and beats arguments must be set.")
 
         for bar in bars:
             if bar not in self.grid:
@@ -134,28 +165,34 @@ class Grid:
             for track in tracks:
                 if track not in self.grid[bar]:
                     self.grid[bar][track] = []
-                    for _ in range(self.number_of_positions):
+                    for _ in range(self.number_of_beats):
                         self.grid[bar][track].append([])
-                    print("LEN:", len(self.grid[bar][track]))
-                for position in positions:
-                    if position >= len(self.grid[bar][track]):
-                        raise Exception((
-                            "Position is greater than the grids granularity size: "
-                            f"{position} >= {len(self.grid[bar][track])}"
-                        ))
-                    # -1 is a wildcard for fill all positions
-                    if position == -1:
-                        for wildcard in range(self.number_of_positions):
-                            self.grid[bar][track][wildcard].append({
-                                'velocity': velocity, 'duration': duration, 'value': value
-                            })
+                for beat in beats:
+                    if beat >= len(self.grid[bar][track]):
+                        raise GranularityIndexGridError(
+                            (
+                                "Position is greater than the grids granularity size: "
+                                f"{beat} >= {len(self.grid[bar][track])}"
+                            )
+                        )
+                    # -1 is a wildcard for fill all beats
+                    if beat == WILDCARD:
+                        for wildcard in range(self.number_of_beats):
+                            self.grid[bar][track][wildcard].append(
+                                {
+                                    "velocity": velocity,
+                                    "duration": duration,
+                                    "value": value,
+                                    "single_note": single_note,
+                                }
+                            )
                     else:
-                        self.grid[bar][track][position].append({
-                            'velocity': velocity, 'duration': duration, 'value': value
-                        })
+                        self.grid[bar][track][beat].append(
+                            {"velocity": velocity, "duration": duration, "value": value}
+                        )
 
     def to_data(self, velocity_jitter: int = 5) -> str:
-        return ''
+        return ""
 
     def save(self, path: str, velocity_jitter: int = 5):
         with open(path, "w") as outfd:
@@ -163,4 +200,5 @@ class Grid:
 
     def dump_grid(self):
         from pprint import pprint
+
         pprint(self.grid, width=120)
