@@ -6,9 +6,9 @@
 # s = sixteenth 0.25
 # t = thirty-second 0.125
 # 0 = skip/0 value
-# format: start-time-offset|pitch,note,note-additional-time,volume|velocity;...
-#start-time-offset|pitch!pitch2!...,note,note-additional-time,volume,velocity;...\n
-#start-time-offset|pitch,note,note-additional-time,volume,velocity;...\n
+# format: start-time-offset|pitch,note,note-additional-time,volume;...
+# start-time-offset|pitch!pitch2!...,note,note-additional-time,volume;...\n
+# start-time-offset|pitch,note,note-additional-time,volume;...\n
 # 0|33,q,0,100;
 # 1|100!50,h,0,100;
 import sys
@@ -59,8 +59,8 @@ def chord_to_midi(chord: str, octave: int) -> list[int]:
 
 
 def gen_inst1():
-    #chord_progression = ["Cmaj7", "Cmaj7", "Fmaj7", "Gdom7"]
-    chord_progression = ["Am", "F", "Em", "Dm"] # "Cmaj7", "Fmaj7", "Gdom7"]
+    # chord_progression = ["Cmaj7", "Cmaj7", "Fmaj7", "Gdom7"]
+    chord_progression = ["Am", "F", "Em", "Dm"]  # "Cmaj7", "Fmaj7", "Gdom7"]
     data = "0|"
     # 0|33,q,0,100;
     # 1|100,h,0,100;
@@ -69,24 +69,24 @@ def gen_inst1():
     for _ in range(30):
         pitch = midi_pitches[mi]
         mi += 1
-        velocity = random.randint(20, 90)
+        volume = random.randint(20, 90)
         if mi >= len(midi_pitches):
             mi = 0
-        data += f"{pitch},q,0,{velocity};"
+        data += f"{pitch},q,0,{volume};"
     return data
 
 
 def gen_inst2():
     chord_progression = ["Gmaj7", "Cmaj7", "Fmaj7", "Cdom7"]
-    chord_progression = ["Am", "F", "Em", "Dm"] # "Cmaj7", "Fmaj7", "Gdom7"]
+    chord_progression = ["Am", "F", "Em", "Dm"]  # "Cmaj7", "Fmaj7", "Gdom7"]
     data = "0|"
     # 0|33,q,0,100;
     # 1|100,h,0,100;
     midi_pitches = progression_to_midi(chord_progression, 4)
     for _ in range(10):
         for pitch in midi_pitches:
-            velocity = random.randint(20, 30)
-            data += f"{pitch},w,0,{velocity};"
+            volume = random.randint(20, 30)
+            data += f"{pitch},w,0,{volume};"
     return data
 
 
@@ -98,8 +98,8 @@ def gen_inst3():
     for _ in range(10):
         for chord_notes in midi_chords:
             pitch = '!'.join(list(map(str, chord_notes)))
-            velocity = random.randint(40, 60)
-            data += f"{pitch},w,0,{velocity};"
+            volume = random.randint(40, 60)
+            data += f"{pitch},w,0,{volume};"
     return data
 
 
@@ -111,20 +111,20 @@ def gen_inst4(chords: list[str]):
     for _ in range(10):
         for n, chord_notes in enumerate(midi_chords):
             pitch = '!'.join(list(map(str, chord_notes)))
-            velocity = random.randint(40, 60)
+            volume = random.randint(40, 60)
             if n in (3, 4):
-                data += f"{pitch},h,0,{velocity};"
+                data += f"{pitch},h,0,{volume};"
             else:
-                data += f"{pitch},w,0,{velocity};"
+                data += f"{pitch},w,0,{volume};"
     # add same progression but as single quarter notes to play out the chord over time
     data += "\n0|"
     for _ in range(10):
         for n, chord_notes in enumerate(midi_chords):
-            velocity = random.randint(24, 48)
+            volume = random.randint(24, 48)
+            note_type = '0'
             if n in (3, 4):
                 # this is half
                 note_type_silent = ''
-                note_type = '0'
                 if len(chord_notes) == 2:
                     note_type = 'q'
                 elif len(chord_notes) == 3:
@@ -136,7 +136,7 @@ def gen_inst4(chords: list[str]):
                     note_type = 'e'
                     chord_notes = chord_notes[:4]
                 for pitch in chord_notes:
-                    data += f"{pitch},{note_type},0,{velocity};"
+                    data += f"{pitch},{note_type},0,{volume};"
                 if note_type_silent:
                     data += f"0,{note_type_silent},0,0;"
             else:
@@ -155,7 +155,7 @@ def gen_inst4(chords: list[str]):
                     note_type = 'q'
                     chord_notes = chord_notes[:4]
                 for pitch in chord_notes:
-                    data += f"{pitch},{note_type},0,{velocity};"
+                    data += f"{pitch},{note_type},0,{volume};"
                 if note_type_silent:
                     data += f"0,{note_type_silent},0,0;"
 

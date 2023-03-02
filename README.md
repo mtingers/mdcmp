@@ -23,8 +23,8 @@ t = thirty-second - 0.125
 
 Format:
 ```
-start-time-offset|pitch!pitch2!...,note,note-additional-time,volume,velocity;...\n
-start-time-offset|pitch,note,note-additional-time,volume,velocity;...\n
+start-time-offset|pitch!pitch2!...,note,note-additional-time,volume;...\n
+start-time-offset|pitch,note,note-additional-time,volume;...\n
 ...
 ```
 

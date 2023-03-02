@@ -2,7 +2,7 @@ import random
 import sys
 from midiutil import MIDIFile
 from .drummap import DRUMS_R
-from .util import NOTE_TYPE_MAP, NOTE_TYPE_TO_DURATION
+from .util import NOTE_TYPE_MAP
 from .util import note_type_to_offset
 from .exceptions import (
     DrumFormatError,
@@ -65,14 +65,14 @@ class Generator:
 
     def gen1(self):
         # kick, snare, hat
-        self.gen_track("kick1", self.total_duration, "h", velocity=55)
-        self.gen_track("snare1", self.total_duration, "h", velocity=50, time_offset=1)
-        self.gen_track("hat1", self.total_duration, "e", velocity=50)
+        self.gen_track("kick1", self.total_duration, "h", volume=55)
+        self.gen_track("snare1", self.total_duration, "h", volume=50, time_offset=1)
+        self.gen_track("hat1", self.total_duration, "e", volume=50)
         self.gen_track(
             "hat1",
             self.total_duration,
             "s",
-            velocity=50,
+            volume=50,
             time_offset=self.total_duration,
         )
 
@@ -82,8 +82,8 @@ class Generator:
         allowed_types: list[str],
         nitems: int = 1,
         time_offset: float = 0,
-        velocity_min: int = 0,
-        velocity_max: int = 100,
+        volume_min: int = 0,
+        volume_max: int = 100,
     ):
         """Generate a random drums part using w,h,q,e,s"""
         # output = f'{drum}|{random.choice([0, 0, 0, 0, 1, 1, 2])}|'
@@ -92,9 +92,9 @@ class Generator:
             note_type = random.choice(
                 [i for i in list(NOTE_TYPE_MAP.keys()) if i in allowed_types]
             )
-            velocity = random.randint(velocity_min, velocity_max)
+            volume = random.randint(volume_min, volume_max)
             extra = random.choice("0000est")
-            output += f"{note_type},{extra},{velocity};"
+            output += f"{note_type},{extra},{volume};"
         return output
 
     def rng2(
@@ -104,8 +104,8 @@ class Generator:
         preferred_types: list[str],
         nitems: int = 1,
         time_offset: int = 0,
-        velocity_min: int = 0,
-        velocity_max: int = 100,
+        volume_min: int = 0,
+        volume_max: int = 100,
     ):
         """Generate a random drums part using w,h,q,e,s"""
         # output = f'{drum}|{random.choice([0, 0, 0, 0, 1, 1, 2])}|'
@@ -122,9 +122,9 @@ class Generator:
                     if random.randint(0, 10) < 5:
                         break
 
-            velocity = random.randint(velocity_min, velocity_max)
+            volume = random.randint(volume_min, volume_max)
             extra = random.choice("0000000000000est")
-            output += f"{note_type},{extra},{velocity};"
+            output += f"{note_type},{extra},{volume};"
         return output
 
     def test1(self):
@@ -143,8 +143,8 @@ class Generator:
         snare_pat3 = "h,0,44;h,0,40;h,0,44;h,0,40;h,0,44;h,0,40;h,0,44;h,0,40;"
         snare_pat4 = snare_pat3 + snare_pat1 + snare_pat3 + snare_pat2
         self._gens.append("snare2|1|" + (snare_pat4 * 6))
-        # self.gen_track('snare1', self.total_duration, 'h', velocity=50, time_offset=1)
-        # self.gen_track('hat1', self.total_duration, 'e', velocity=50)
+        # self.gen_track('snare1', self.total_duration, 'h', volume=50, time_offset=1)
+        # self.gen_track('hat1', self.total_duration, 'e', volume=50)
         hat_pat1 = "e,0,33;e,0,39;e,0,33;e,0,40;e,0,23;e,0,33;e,0,44;e,0,36;"
         hat_pat2 = "e,0,33;e,0,39;e,0,33;e,0,40;e,0,23;e,0,33;e,0,44;e,0,36;e,0,33;e,0,39;e,0,33;e,0,40;e,0,23;e,0,33;s,0,44;s,0,36;s,0,32;s,0,0;"
         self._gens.append("hat1|0|" + (hat_pat2 * 5))
@@ -179,13 +179,13 @@ class Generator:
 
     def test3(self):
         #self._gens.append(self.rng2("hat1", ["e", "s", "t"], ["e"], nitems=120, time_offset=0))
-        self._gens.append(self.rng2("hat2", ["q", "e"], ["q"], nitems=120, time_offset=0, velocity_min=10, velocity_max=30))
-        self.gen_track("hat1", 60, "e", velocity=40)
+        self._gens.append(self.rng2("hat2", ["q", "e"], ["q"], nitems=120, time_offset=0, volume_min=10, volume_max=30))
+        self.gen_track("hat1", 60, "e", volume=40)
         self._gens.append(
-            self.rng2("kick1", ["h", "e"], ["h"], nitems=120, time_offset=0, velocity_min=30, velocity_max=60)
+            self.rng2("kick1", ["h", "e"], ["h"], nitems=120, time_offset=0, volume_min=30, volume_max=60)
         )
         self._gens.append(
-            self.rng2("snare1", ["h",], ["h"], nitems=120, time_offset=1, velocity_min=30, velocity_max=50)
+            self.rng2("snare1", ["h",], ["h"], nitems=120, time_offset=1, volume_min=30, volume_max=50)
         )
 
     def gen_track(
@@ -195,12 +195,12 @@ class Generator:
         note_type: str,
         time_offset: float = 0.0,
         time_extra: int = 0,
-        velocity: int = 50,
+        volume: int = 50,
     ):
         data = f"{drum}|{time_offset}|"
         duration = note_type_to_offset(duration, note_type)
         for _ in range(1, int(duration) + 1):
-            data += f"{note_type},{time_extra},{velocity};"
+            data += f"{note_type},{time_extra},{volume};"
         self._gens.append(data)
 
     def write(self, outfile: str):
@@ -216,13 +216,13 @@ class Controller:
         self,
         track: int = 1,
         tempo: int = 120,
-        velocity: int = 50,
+        volume: int = 50,
         total_duration: float = 60,
         midi_obj: MIDIFile | None = None,
     ):
         self.track: int = track
         self.tempo: int = tempo
-        self.velocity: int = velocity
+        self.volume: int = volume
         self.total_duration: float = total_duration
         if midi_obj:
             self.midi = midi_obj
@@ -241,7 +241,7 @@ class Controller:
         for pattern in patterns:
             if not pattern.strip():
                 continue
-            note_type, note_extra, velocity = pattern.split(",")
+            note_type, note_extra, volume = pattern.split(",")
             try:
                 increment = NOTE_TYPE_MAP[note_type]
                 timer_extra = NOTE_TYPE_MAP[note_extra]
@@ -251,7 +251,7 @@ class Controller:
                 )
             duration = increment
             self.midi.addNote(
-                self.track, 0, pitch, timer + timer_extra, duration, int(velocity)
+                self.track, 0, pitch, timer + timer_extra, duration, int(volume)
             )
             timer += increment
 

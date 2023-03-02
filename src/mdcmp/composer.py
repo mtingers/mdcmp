@@ -48,9 +48,9 @@ class Generator:
             note_type = random.choice(
                 [i for i in list(NOTE_TYPE_MAP.keys()) if i in allowed_types]
             )
-            velocity = random.randint(0, 100)
+            volume = random.randint(0, 100)
             extra = random.choice("0000est")
-            output += f"{note_type},{extra},{velocity};"
+            output += f"{note_type},{extra},{volume};"
         return output
 
     def rng2(
@@ -74,16 +74,18 @@ class Generator:
                     if random.randint(0, 10) < 5:
                         break
 
-            velocity = random.randint(0, 100)
+            volume = random.randint(0, 100)
             extra = random.choice("0000est")
-            output += f"{note_type},{extra},{velocity};"
+            output += f"{note_type},{extra},{volume};"
         return output
 
     def gen_progression_with_melody(self, chord_file_path: str):
         """
         Read a chord file pack, parse it, select a random progression, and create a prog+melody
         """
-        chord_data = random.choice(open(chord_file_path).read().strip().replace(' ', '').split('\n'))
+        chord_data = random.choice(
+            open(chord_file_path).read().strip().replace(' ', '').split('\n')
+        )
         chords = chord_data.split(',')
         octave = random.randint(4, 5)
         midi_chords = [chord_to_midi(i, octave) for i in chords]
@@ -109,8 +111,8 @@ class Generator:
             print(len(midi_chords), len(cycle), '<<<<<<<<<<<<<<<<<<<')
             for n, chord_notes in enumerate(midi_chords):
                 pitch = '!'.join(list(map(str, chord_notes)))
-                velocity = random.randint(40, 60)
-                data += f"{pitch},{cycle[n]},0,{velocity};"
+                volume = random.randint(40, 60)
+                data += f"{pitch},{cycle[n]},0,{volume};"
             # add same progression but as single quarter notes to play out the chord over time
         new_data = ''
         for _ in range(10):
@@ -120,7 +122,7 @@ class Generator:
         data = "0|"
         for _ in range(10):
             for n, chord_notes in enumerate(midi_chords):
-                velocity = random.randint(38, 48)
+                volume = random.randint(38, 48)
                 note_type = '0'
                 note_type_silent = ''
                 if not even_number_of_chords and len(midi_chords)-2 <= n:
@@ -146,7 +148,7 @@ class Generator:
                         note_type = 'q'
                         chord_notes = chord_notes[:4]
                 for pitch in chord_notes:
-                    data += f"{pitch},{note_type},0,{velocity};"
+                    data += f"{pitch},{note_type},0,{volume};"
                 if note_type_silent:
                     data += f"0,{note_type_silent},0,0;"
         self._gens.append(data)
@@ -157,7 +159,7 @@ class Generator:
         note_type: str,
         time_offset: float = 0.0,
         time_extra: float = 0,
-        velocity: int = 50,
+        volume: int = 50,
     ):
         """
         A mostly useless general purpose generator that uses a constant note type
@@ -167,7 +169,7 @@ class Generator:
         data = f"{time_offset}|"
         duration = note_type_to_offset(duration, note_type)
         for _ in range(1, int(duration) + 1):
-            data += f"{note_type},{time_extra},{velocity};"
+            data += f"{note_type},{time_extra},{volume};"
         self._gens.append(data)
 
     def write(self, outfile: str):
@@ -183,13 +185,13 @@ class Controller:
         self,
         track: int = 1,
         tempo: int = 120,
-        velocity: int = 50,
+        volume: int = 50,
         total_duration: float = 60.0,
         midi_obj: MIDIFile | None = None,
     ):
         self.track: int = track
         self.tempo: int = tempo
-        self.velocity: int = velocity
+        self.volume: int = volume
         self.total_duration: float = total_duration
         if midi_obj:
             self.midi = midi_obj
@@ -206,7 +208,7 @@ class Controller:
 
     def _process_composition_pattern(self, patterns: list[str], start_offset: float):
         """Convert a single line of the composer format data to midi."""
-        # format: start-time-offset|pitch,note,note-additional-time,volume|velocity;...
+        # format: start-time-offset|pitch,note,note-additional-time,volume|volume;...
         # 0|33,q,0,100;
         timer: float = 0.0 + start_offset
         duration: float = 1.0
@@ -214,7 +216,7 @@ class Controller:
         for pattern in patterns:
             if not pattern.strip():
                 continue
-            pitch, note_type, note_extra, velocity = pattern.split(",")
+            pitch, note_type, note_extra, volume = pattern.split(",")
             if '!' in pitch:
                 pitches = list(map(int, pitch.split('!')))
             else:
@@ -229,7 +231,7 @@ class Controller:
             duration = increment
             for pitch in pitches:
                 self.midi.addNote(
-                    self.track, 0, pitch, timer + timer_extra, duration, int(velocity)
+                    self.track, 0, pitch, timer + timer_extra, duration, int(volume)
                 )
             timer += increment
 

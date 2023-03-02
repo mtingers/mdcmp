@@ -36,6 +36,11 @@ ACCIDENTALS = {
 # MIDI has a bit more than 10 octaves, but we will cap at 10
 OCTAVES = list(range(10))
 
+# min/max of MIDI volume integer values
+VOLUME_MIN = 0
+VOLUME_MAX = 127
+VOLUME_RANGE = (0, 127)
+
 
 def swap_accidental(note):
     return ACCIDENTALS.get(note, note)

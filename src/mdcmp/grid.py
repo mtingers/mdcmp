@@ -54,7 +54,7 @@ Below is a diagram of how these are layered using a drum and instrument combeat:
             0:                          <-- track
             [                           <-- beat
                 {                       <-- metadata
-                    'velocity': N,
+                    'volume': N,
                     'duration': N,
                     'value': 'X',
                 }
@@ -141,7 +141,7 @@ class Grid:
                                 beats=[beat],
                                 value=d["value"],
                                 duration=d["duration"],
-                                velocity=d["velocity"],
+                                volume=d["volume"],
                                 single_note=d["single_note"],
                             )
                 next_bar_index += 1
@@ -153,7 +153,7 @@ class Grid:
         beats: list[int] | None = None,
         value: str = "",
         duration: int = 1,
-        velocity: int = 50,
+        volume: int = 50,
         single_note=False,
     ):
         if not bars or not tracks or not beats:
@@ -180,7 +180,7 @@ class Grid:
                         for wildcard in range(self.number_of_beats):
                             self.grid[bar][track][wildcard].append(
                                 {
-                                    "velocity": velocity,
+                                    "volume": volume,
                                     "duration": duration,
                                     "value": value,
                                     "single_note": single_note,
@@ -188,15 +188,39 @@ class Grid:
                             )
                     else:
                         self.grid[bar][track][beat].append(
-                            {"velocity": velocity, "duration": duration, "value": value}
+                            {"volume": volume, "duration": duration, "value": value}
                         )
 
-    def to_data(self, velocity_jitter: int = 5) -> str:
+    def dampen(
+        self,
+        bars: list[int] | None = None,
+        tracks: list[int] | None = None,
+        beats: list[int] | None = None,
+        duration: int = 1,
+        volume: int = 50,
+    ):
+        """
+        Adjust the volume/volume of the specified items. Note that this can completely mute with a
+        volume of 0.
+        """
+        # grid.silence(beats=[7], bars=[2], duration=2, tracks=[2,3]) # maybe?
+        if not bars or not tracks:
+            raise RequiredArgsGridError("Both bars and tracks parameters must be specified.")
+        for bar in bars:
+            tmp = self.grid.get(bar, None)
+            if not tmp:
+                raise BarIndexGridError(f"Invalid bar index specified: {bar}")
+            for track in tracks:
+                track_tmp = tmp.get(track, None)
+                if not track_tmp:
+                    raise TrackIndexGridError(f"Invalid track index specified: {track}")
+
+    def to_data(self, volume_jitter: int = 5) -> str:
         return ""
 
-    def save(self, path: str, velocity_jitter: int = 5):
+    def save(self, path: str, volume_jitter: int = 5):
         with open(path, "w") as outfd:
-            outfd.write(self.to_data(velocity_jitter=velocity_jitter))
+            outfd.write(self.to_data(volume_jitter=volume_jitter))
 
     def dump_grid(self):
         from pprint import pprint
