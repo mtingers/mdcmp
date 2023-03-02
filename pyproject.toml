@@ -29,6 +29,8 @@ where = ["src"]
 mdcmp-drummer = "mdcmp.drummer:main"
 # generate MIDI file from .comp file
 mdcmp-composer = "mdcmp.composer:main"
+# create MIDI file from progression data file
+mdcmp-progression = "mdcmp.composer:generate"
 # generate MIDI file from .comp and .drum file
 mdcmp-combiner = "mdcmp.composer:combiner"
 # Main CLI program

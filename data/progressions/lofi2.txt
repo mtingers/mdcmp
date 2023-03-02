@@ -1,0 +1,3 @@
+Amin11, D7, Fmaj7, Cmaj7
+Dmin11, Gmin7, Dmin11, Ebmin11, C#dim7
+Gmin9, Ebmaj9, Cmin11, Ebminmaj7

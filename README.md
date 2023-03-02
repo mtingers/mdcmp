@@ -23,11 +23,12 @@ t = thirty-second - 0.125
 
 Format:
 ```
-start-time-offset|pitch,note,note-additional-time,volume|velocity;...\n
-start-time-offset|pitch,note,note-additional-time,volume|velocity;...\n
+start-time-offset|pitch!pitch2!...,note,note-additional-time,volume,velocity;...\n
+start-time-offset|pitch,note,note-additional-time,volume,velocity;...\n
 ...
 ```
 
+You can have create chords/multiple pitches by separating them by "!" like `40!45!60,...`
 Example format:
 ```
 0|33,q,0,100;

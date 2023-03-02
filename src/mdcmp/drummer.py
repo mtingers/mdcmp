@@ -3,7 +3,7 @@ import sys
 from midiutil import MIDIFile
 from .drummap import DRUMS_R
 from .util import NOTE_TYPE_MAP, NOTE_TYPE_TO_DURATION
-from .util import note_to_offset
+from .util import note_type_to_offset
 from .exceptions import (
     DrumFormatError,
     DrumLineError,
@@ -63,12 +63,6 @@ class Generator:
         self.moods: list[str] = moods
         self._gens: list[str] = []
 
-    def _duration_note_to_offset(self, duration: float, note_type: str) -> float:
-        """Calculate the offset of a note at a duration."""
-        m = NOTE_TYPE_TO_DURATION[note_type]
-        duration = float(duration * m)
-        return duration
-
     def gen1(self):
         # kick, snare, hat
         self.gen_track("kick1", self.total_duration, "h", velocity=55)
@@ -88,6 +82,8 @@ class Generator:
         allowed_types: list[str],
         nitems: int = 1,
         time_offset: float = 0,
+        velocity_min: int = 0,
+        velocity_max: int = 100,
     ):
         """Generate a random drums part using w,h,q,e,s"""
         # output = f'{drum}|{random.choice([0, 0, 0, 0, 1, 1, 2])}|'
@@ -96,7 +92,7 @@ class Generator:
             note_type = random.choice(
                 [i for i in list(NOTE_TYPE_MAP.keys()) if i in allowed_types]
             )
-            velocity = random.randint(0, 100)
+            velocity = random.randint(velocity_min, velocity_max)
             extra = random.choice("0000est")
             output += f"{note_type},{extra},{velocity};"
         return output
@@ -108,6 +104,8 @@ class Generator:
         preferred_types: list[str],
         nitems: int = 1,
         time_offset: int = 0,
+        velocity_min: int = 0,
+        velocity_max: int = 100,
     ):
         """Generate a random drums part using w,h,q,e,s"""
         # output = f'{drum}|{random.choice([0, 0, 0, 0, 1, 1, 2])}|'
@@ -124,8 +122,8 @@ class Generator:
                     if random.randint(0, 10) < 5:
                         break
 
-            velocity = random.randint(0, 100)
-            extra = random.choice("0000est")
+            velocity = random.randint(velocity_min, velocity_max)
+            extra = random.choice("0000000000000est")
             output += f"{note_type},{extra},{velocity};"
         return output
 
@@ -179,6 +177,17 @@ class Generator:
             )
         )
 
+    def test3(self):
+        #self._gens.append(self.rng2("hat1", ["e", "s", "t"], ["e"], nitems=120, time_offset=0))
+        self._gens.append(self.rng2("hat2", ["q", "e"], ["q"], nitems=120, time_offset=0, velocity_min=10, velocity_max=30))
+        self.gen_track("hat1", 60, "e", velocity=40)
+        self._gens.append(
+            self.rng2("kick1", ["h", "e"], ["h"], nitems=120, time_offset=0, velocity_min=30, velocity_max=60)
+        )
+        self._gens.append(
+            self.rng2("snare1", ["h",], ["h"], nitems=120, time_offset=1, velocity_min=30, velocity_max=50)
+        )
+
     def gen_track(
         self,
         drum: str,
@@ -189,7 +198,7 @@ class Generator:
         velocity: int = 50,
     ):
         data = f"{drum}|{time_offset}|"
-        duration = note_to_offset(duration, note_type)
+        duration = note_type_to_offset(duration, note_type)
         for _ in range(1, int(duration) + 1):
             data += f"{note_type},{time_extra},{velocity};"
         self._gens.append(data)
@@ -218,7 +227,7 @@ class Controller:
         if midi_obj:
             self.midi = midi_obj
         else:
-            self.midi = MIDIFile(numTracks=128)
+            self.midi = MIDIFile(numTracks=128, deinterleave=False)
             self.midi.addTempo(0, 0, self.tempo)
         self.generator = Generator(self.total_duration, [])
 
@@ -273,7 +282,7 @@ class Controller:
 def main():
     drummer = Controller(tempo=60, total_duration=120)
     gen = drummer.generator
-    gen.test2()
+    gen.test3()
     gen.write(sys.argv[1])
     drummer.process_drum_file(sys.argv[1])
     drummer.write(sys.argv[2])
