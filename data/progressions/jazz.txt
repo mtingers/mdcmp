@@ -1,0 +1,9 @@
+Cmaj7, Amin7, Dmin7, G7
+Cmaj7, C#dim7, Dmin7, G7
+Cmaj7, Fmaj7, Emin7, A7
+Cmin7, Amin7, Dmin7, G7
+Dmin7, Db7, Cmaj7
+Dmin7, G7, Cmaj7
+Dmin7b5, G7, Cmin7
+Ebmin7, Ab7, Dmin7, G7, Cmaj7
+Emin7, A7, Dmin7, G7

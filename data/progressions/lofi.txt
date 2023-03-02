@@ -1,0 +1,11 @@
+Amin11, D7, Fmaj7, Cmaj7
+CMaj9, B7aug5#9, Emin9, EbMaj7Aug5, Dmaj7, DbMaj7Aug5, CMaj7, F/B
+Cmin11, Fmin9, Cmin11, G7#5
+Cmin9, Fmin9, F/G, DbMaj9, Cmin9, Fmin9, F/G, G7b9aug5
+Dmin11, Ebmin11
+Dmin11, Gmin7, Dmin11, Ebmin11, C#dim7
+Ebmaj9, Abmaj13
+F#Maj9, BMaj9, AMaj9, EMaj9, F#Maj9, BMaj9, AMaj9, DMaj9
+Fmin9, Ebmaj9
+Gmaj7, F#min7, Amin7b5
+Gmin9, Ebmaj9, Cmin11, Ebminmaj7
