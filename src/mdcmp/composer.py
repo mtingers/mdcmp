@@ -278,29 +278,7 @@ def generate():
     gen.write(sys.argv[2])
     controller.process_composition_file(sys.argv[2])
     controller.write(sys.argv[3])
-    """
 
-    progression = Progression('lofi.txt')
-    c = Compose()
-    grid = c.grid(quantize='e', bars=2)
-    # 1 2 3 4 5 6 7 8
-    # k       k
-    #     s       s
-    # h h h h h h h h
-    grid.add_drum(positions=[1,5], bars=[1,2], value='kick1', duration=2, velocity=50)
-    grid.add_drum(positions=[3,7], bars=[1,2], value='snare1', duration=2, velocity=50)
-    grid.add_drum(positions=[0], bars=[1,2], value='hat1', duration=1, velocity=50)
-    grid.add_chord(positions=[1], bars=[1], value='Cm7', duration=2, velocity=50)
-    grid.add_note(positions=[3], bars=[1], value='D#', duration=2, velocity=50)
-    grid.silence(positions=[7], bars=[2], duration=2)
-    grid.extend(bars=2)  # add 2 more blank bars
-    grid.copy_to_end(bars=[2,1], count=2)  # copy bars 2+1 (in that order) to the end 2 times
-    grid.write('/path/save.grid')
-
-    p = c.prog_load('lofi.txt')
-    p.generate(duration=4)
-    c.add_progression(p)
-    """
 
 def combiner():
     # TODO: add argparser
