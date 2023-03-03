@@ -84,9 +84,9 @@ class Generator:
         Read a chord file pack, parse it, select a random progression, and create a prog+melody
         """
         chord_data = random.choice(
-            open(chord_file_path).read().strip().replace(' ', '').split('\n')
+            open(chord_file_path).read().strip().replace(" ", "").split("\n")
         )
-        chords = chord_data.split(',')
+        chords = chord_data.split(",")
         octave = random.randint(4, 5)
         midi_chords = [chord_to_midi(i, octave) for i in chords]
         even_number_of_chords = len(midi_chords) % 2 == 0
@@ -94,8 +94,8 @@ class Generator:
             total_target = len(midi_chords) * 4
         else:
             total_target = (len(midi_chords) - 2) * 4 + 2
-        #data = "0|"
-        data = ''
+        # data = "0|"
+        data = ""
         for _ in range(2):
             cycle: list[str] = []
             total = 0
@@ -108,44 +108,44 @@ class Generator:
                     note = "q"
                 cycle.append(note)
                 total += NOTE_TYPE_MAP[note]
-            print(len(midi_chords), len(cycle), '<<<<<<<<<<<<<<<<<<<')
+            print(len(midi_chords), len(cycle), "<<<<<<<<<<<<<<<<<<<")
             for n, chord_notes in enumerate(midi_chords):
-                pitch = '!'.join(list(map(str, chord_notes)))
+                pitch = "!".join(list(map(str, chord_notes)))
                 volume = random.randint(40, 60)
                 data += f"{pitch},{cycle[n]},0,{volume};"
             # add same progression but as single quarter notes to play out the chord over time
-        new_data = ''
+        new_data = ""
         for _ in range(10):
             new_data += data
-        data = f'0|{new_data}'
+        data = f"0|{new_data}"
         self._gens.append(data)
         data = "0|"
         for _ in range(10):
             for n, chord_notes in enumerate(midi_chords):
                 volume = random.randint(38, 48)
-                note_type = '0'
-                note_type_silent = ''
-                if not even_number_of_chords and len(midi_chords)-2 <= n:
+                note_type = "0"
+                note_type_silent = ""
+                if not even_number_of_chords and len(midi_chords) - 2 <= n:
                     if len(chord_notes) == 2:
-                        note_type = 'q'
+                        note_type = "q"
                     elif len(chord_notes) == 3:
-                        note_type = 'e'
-                        note_type_silent = 'e'
+                        note_type = "e"
+                        note_type_silent = "e"
                     elif len(chord_notes) == 4:
-                        note_type = 'e'
+                        note_type = "e"
                     elif len(chord_notes) > 4:
-                        note_type = 'e'
+                        note_type = "e"
                         chord_notes = chord_notes[:4]
                 else:
                     if len(chord_notes) == 2:
-                        note_type = 'h'
+                        note_type = "h"
                     elif len(chord_notes) == 3:
-                        note_type = 'q'
-                        note_type_silent = 'q'
+                        note_type = "q"
+                        note_type_silent = "q"
                     elif len(chord_notes) == 4:
-                        note_type = 'q'
+                        note_type = "q"
                     elif len(chord_notes) > 4:
-                        note_type = 'q'
+                        note_type = "q"
                         chord_notes = chord_notes[:4]
                 for pitch in chord_notes:
                     data += f"{pitch},{note_type},0,{volume};"
@@ -217,8 +217,8 @@ class Controller:
             if not pattern.strip():
                 continue
             pitch, note_type, note_extra, volume = pattern.split(",")
-            if '!' in pitch:
-                pitches = list(map(int, pitch.split('!')))
+            if "!" in pitch:
+                pitches = list(map(int, pitch.split("!")))
             else:
                 pitches = [int(pitch)]
             try:

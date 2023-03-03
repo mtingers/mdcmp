@@ -178,14 +178,42 @@ class Generator:
         )
 
     def test3(self):
-        #self._gens.append(self.rng2("hat1", ["e", "s", "t"], ["e"], nitems=120, time_offset=0))
-        self._gens.append(self.rng2("hat2", ["q", "e"], ["q"], nitems=120, time_offset=0, volume_min=10, volume_max=30))
+        # self._gens.append(self.rng2("hat1", ["e", "s", "t"], ["e"], nitems=120, time_offset=0))
+        self._gens.append(
+            self.rng2(
+                "hat2",
+                ["q", "e"],
+                ["q"],
+                nitems=120,
+                time_offset=0,
+                volume_min=10,
+                volume_max=30,
+            )
+        )
         self.gen_track("hat1", 60, "e", volume=40)
         self._gens.append(
-            self.rng2("kick1", ["h", "e"], ["h"], nitems=120, time_offset=0, volume_min=30, volume_max=60)
+            self.rng2(
+                "kick1",
+                ["h", "e"],
+                ["h"],
+                nitems=120,
+                time_offset=0,
+                volume_min=30,
+                volume_max=60,
+            )
         )
         self._gens.append(
-            self.rng2("snare1", ["h",], ["h"], nitems=120, time_offset=1, volume_min=30, volume_max=50)
+            self.rng2(
+                "snare1",
+                [
+                    "h",
+                ],
+                ["h"],
+                nitems=120,
+                time_offset=1,
+                volume_min=30,
+                volume_max=50,
+            )
         )
 
     def gen_track(

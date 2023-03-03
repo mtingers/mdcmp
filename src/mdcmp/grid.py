@@ -74,13 +74,34 @@ WILDCARD = -1
 
 DURATION_GRANULARITY_MAP = {
     # granularity: {duration: note, ...}
-    'h': {1: 'h', 2: 'w', 3: 'w.', 4: 'W'},
-    'q': {1: 'q', 2: 'h', 3: 'h.', 4: 'w', 5: 'w.', 6: 'W'},
-    'e': {1: 'e', 2: 'q', 3: 'q.', 4: 'h', 5: 'h.', 6: 'w', 7: 'w.', 8: 'W'},
-    's': {1: 's', 2: 'e', 3: 'e.', 4: 'q', 5: 'q.', 6: 'h', 7: 'h.', 8: 'w', 9: 'w.', 10: 'W'},
-    't': {
-        1: 't', 2: 's', 3: 's.', 4: 'e', 5: 'e.', 6: 'q', 7: 'q.', 8: 'h', 9: 'h.', 10: 'w',
-        11: 'w.', 12: 'W'
+    "h": {1: "h", 2: "w", 3: "w.", 4: "W"},
+    "q": {1: "q", 2: "h", 3: "h.", 4: "w", 5: "w.", 6: "W"},
+    "e": {1: "e", 2: "q", 3: "q.", 4: "h", 5: "h.", 6: "w", 7: "w.", 8: "W"},
+    "s": {
+        1: "s",
+        2: "e",
+        3: "e.",
+        4: "q",
+        5: "q.",
+        6: "h",
+        7: "h.",
+        8: "w",
+        9: "w.",
+        10: "W",
+    },
+    "t": {
+        1: "t",
+        2: "s",
+        3: "s.",
+        4: "e",
+        5: "e.",
+        6: "q",
+        7: "q.",
+        8: "h",
+        9: "h.",
+        10: "w",
+        11: "w.",
+        12: "W",
     },
 }
 
@@ -285,7 +306,7 @@ class Grid:
         for track in tracks_list:
             for bar in bars_list:
                 if track not in self.grid[bar]:
-                    print('ADD:', bar, track)
+                    print("ADD:", bar, track)
                     self.grid[bar][track] = []
 
     def to_data(self, volume_jitter: int = 5, humanize_jitter: bool = False) -> str:
@@ -311,11 +332,11 @@ class Grid:
         for bar in self.grid.keys():
             for track in tracks_list:
                 if track not in result:
-                    result[track] = {'meta': '', 'data': ''}
+                    result[track] = {"meta": "", "data": ""}
                 # If the track doesn't exist in this bar, create resting space, zeroed out
                 if track not in self.grid[bar]:
                     for _ in range(self.number_of_beats):
-                        result[track]['data'] += f" 0,{self.granularity},n,0;"
+                        result[track]["data"] += f" 0,{self.granularity},n,0;"
                 else:
                     for beat in range(self.number_of_beats):
                         pitches = []
@@ -325,20 +346,24 @@ class Grid:
                         # collect pitches, collect notes, collect offsets, collect volumes
                         if not self.grid[bar][track]:
                             # add rest beat to keep timing alignment
-                            result[track]['data'] += f" 0,{self.granularity},n,0;"
+                            result[track]["data"] += f" 0,{self.granularity},n,0;"
                             continue
                         if not self.grid[bar][track][beat]:
                             # add rest beat to keep timing alignment
-                            result[track]['data'] += f" 0,{self.granularity},n,0;"
+                            result[track]["data"] += f" 0,{self.granularity},n,0;"
                             continue
 
                         for _, j in enumerate(self.grid[bar][track][beat]):
                             # convert to drum or chord or single pitch
                             if j["value"] in DRUMS_R:
                                 pitches.append(DRUMS_R[j["value"]])
-                                result[track]['meta'] = f"_|drum|{self.granularity}|0.0|"
+                                result[track][
+                                    "meta"
+                                ] = f"_|drum|{self.granularity}|0.0|"
                             else:
-                                result[track]['meta'] = f"_|instrument|{self.granularity}|0.0|"
+                                result[track][
+                                    "meta"
+                                ] = f"_|instrument|{self.granularity}|0.0|"
                                 pitch = chord_to_midi(j["value"], j["octave"])
                                 if not j["is_chord"]:
                                     pitches.append(pitch[0])
@@ -352,35 +377,44 @@ class Grid:
                             # 3 = e -> q.
                             # 4 = e -> h
                             # 5 = e -> h.
-                            duration_tmp = DURATION_GRANULARITY_MAP[self.granularity][j["duration"]]
+                            duration_tmp = DURATION_GRANULARITY_MAP[self.granularity][
+                                j["duration"]
+                            ]
                             notes.append(duration_tmp)
                             if humanize_jitter:
-                                offsets.append(random.choice('nnnnt'))  # TODO: not implemented yet
+                                offsets.append(
+                                    random.choice("nnnnt")
+                                )  # TODO: not implemented yet
                             else:
-                                offsets.append('n')
+                                offsets.append("n")
                             jitter = random.randint(-volume_jitter, volume_jitter)
                             new_volume = j["volume"] + jitter
                             if new_volume < 0:
                                 new_volume = j["volume"]
                             volumes.append(new_volume)
                         # Now join all of these lists into MDC format lists
-                        result[track]['data'] += (
+                        result[track]["data"] += (
                             f" {'!'.join(map(str, pitches))},"
                             f"{'!'.join(map(str, notes))},"
                             f"{'!'.join(map(str, offsets))},"
                             f"{'!'.join(map(str, volumes))};"
                         )
-        output: str = '1\n'
+        output: str = "1\n"
         for i in result.values():
             output += f"{i['meta']}{i['data']}\n"
         import pprint
+
         pprint.pprint(result)
         return output
 
     def save(self, path: str, volume_jitter: int = 5, humanize_jitter: bool = False):
         """Generate MDC format data and save to path"""
         with open(path, "w") as outfd:
-            outfd.write(self.to_data(volume_jitter=volume_jitter, humanize_jitter=humanize_jitter))
+            outfd.write(
+                self.to_data(
+                    volume_jitter=volume_jitter, humanize_jitter=humanize_jitter
+                )
+            )
 
     def dump_grid(self):
         """Pretty print the grid data"""

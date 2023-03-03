@@ -21,16 +21,16 @@ NOTE_TYPE_TO_DURATION = {
     "0": 0.0,
 }
 
-NOTES = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B']
+NOTES = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"]
 
 ACCIDENTALS = {
-    'Db': 'C#',
-    'D#': 'Eb',
-    'E#': 'F',
-    'Gb': 'F#',
-    'G#': 'Ab',
-    'A#': 'Bb',
-    'B#': 'C',
+    "Db": "C#",
+    "D#": "Eb",
+    "E#": "F",
+    "Gb": "F#",
+    "G#": "Ab",
+    "A#": "Bb",
+    "B#": "C",
 }
 
 # MIDI has a bit more than 10 octaves, but we will cap at 10
@@ -49,7 +49,7 @@ def swap_accidental(note):
 def note_to_midi_int(note: str, octave: int) -> int:
     note = swap_accidental(note)
     note_int: int = NOTES.index(note)
-    note_int += (len(NOTES) * octave)
+    note_int += len(NOTES) * octave
     return note_int
 
 
@@ -75,5 +75,3 @@ def note_type_to_offset(duration: float, note_type: str) -> float:
     """Calculate the offset of a note at a duration."""
     duration = float(duration * NOTE_TYPE_TO_DURATION[note_type])
     return duration
-
-
