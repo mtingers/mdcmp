@@ -63,6 +63,6 @@ _|instrument|q|0.0| 33,q,n,20; 60,q,n,25; 28,q,n,20; 0,q,n,0;
 This example creates a drum track and instrument track on an eighth note grid:
 ```
 1
-_|drum|e|0.0| kick1!hat1!,q!e,n,50!40; hat1,e,n,50; snare1!hat1,q!e,n,50; hat1,e,n,50;
+_|drum|e|0.0| 36!42!,q!e,n,50!40; 42,e,n,50; 38!42,q!e,n,50; 42,e,n,50;
 _|instrument|e|0.0| 33,e,n,50; 35,e,n,50; 33,e,n,50,1; 32,e,n,50;
 ```
