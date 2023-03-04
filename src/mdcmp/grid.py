@@ -146,7 +146,9 @@ class GranularityIndexGridError(Exception):
 class Grid:
     def __init__(self, granularity: Granularity = Granularity.EIGHTH):
         self.granularity: str = granularity.value
-        self.number_of_beats: int = int(NOTE_TYPE_GRID_QUANTIZE_MAP[self.granularity] * 4)
+        self.number_of_beats: int = int(
+            NOTE_TYPE_GRID_QUANTIZE_MAP[self.granularity] * 4
+        )
         self.grid: dict[int, dict[int, list[list[dict[str, Any]]]]] = {}
 
     def copy_to_end(
