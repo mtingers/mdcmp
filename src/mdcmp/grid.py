@@ -6,48 +6,52 @@ Key features:
     - Layer multiple notes at one bar beat.
     - Layer multiple tracks on top of each other.
     - Easily copy and repeat bars.
+    - Run mass transformation on groups of bars and tracks.
 
 Notes:
     - If bars 1,2 and 5 are created, the generated output will be a full rest/blank bar for bar 3-4.
-    - Notes are either classified as "drum" or "pitch".
+    - Notes are either classified as "drum" or "instrument".
     - Note classification checks if value matches a drum name and uses the drum.  Otherwise, it will
       attempt to translate the note or chord into a series of midi pitches when generating the MDC
       data file.
 
-Granularity notes:
-When a grid is initially defined, it has a set granularity related to a type of note (e.g. whole,
-half, quarter, eighth, sixteenth, or thirtysecond).  A bar will have N beats based off of this
-granularity.  For example, a granularity of whole note only has 1 beat per bar, where a granularity
-of quarter note has 4, and eighth has 8 beats.
+Granularity:
+When a grid is initially defined, it has a set granularity related to a type of note (e.g. half,
+quarter, eighth, sixteenth, or thirtysecond).  A bar will have N beats based off of this
+granularity.  For example, a granularity of half note only has 2 beats per bar, where a granularity
+of quarter note has 4, and eighth has 8 beats, etc.
+
+TODO:
+    - Spread a chord across beats:
+        grid.chord_spread(value='Cm7', track=3, start_bar=1, start_beat=1, spacer=1)
+    - Maybe add resphape(), but this could be difficult:
+        grid.reshape(new_granularity=Granularity.SIXTEENTH)
 
 
-Below is a diagram of how these are layered using a drum and instrument combeat:
+Below is a diagram of how these are layered using a drum and instrument composition:
 
-    #######################################################
+    ###################################################
     track-1:               bar-1            bar-2
     track-1:      +-----------------------------------+
-    track-1:  time| 1 2 3 4 5 6 7 8 | 1 2 3 4 5 6 7 8 |
+    track-1:  time| 0 1 2 3 4 5 6 7 8 | 1 2 3 4 5 6 7 |
     track-1:      +-----------------------------------+
     track-1:  kick| k       k       | k       k       |
     track-1: snare|     s       s   |     s       s   |
     track-1:   hat| h h h h h h h h | h h h h h h h h |
     track-1:      +-----------------------------------+
-    #######################################################
+    ###################################################
     track-2:               bar-1            bar-2
     track-2:      +-----------------------------------+
-    track-2:  time| 1 2 3 4 5 6 7 8 | 1 2 3 4 5 6 7 8 |
+    track-2:  time| 0 1 2 3 4 5 6 7 8 | 1 2 3 4 5 6 7 |
     track-2:      +-----------------------------------+
     track-2:      | C               |                 |
     track-2:      | Eb  Eb          |     Eb          |
     track-2:      | G               |                 |
     track-2:      | Bb              |                 |
     track-2:      +-----------------------------------+
-    #######################################################
+    ###################################################
 
-    grid.chord_spread(value='Cm7', track=3, start_bar=1, start_beat=1, spacer=1)
-    grid.save('/path/save.mdc')
-    raw_mdc_data = grid.data()
-    # maybe add resphape() grid.reshape(Granularity.SIXTEENTH)
+Grid datastructure:
     grid = {
         0: {                            <-- bar
             0:                          <-- track
@@ -56,6 +60,9 @@ Below is a diagram of how these are layered using a drum and instrument combeat:
                     'volume': N,
                     'duration': N,
                     'value': 'X',
+                    # ignored for drums:
+                    'is_chord': 0 | 1 | -1,
+                    'octave': N,
                 }
             ],
         }
@@ -65,7 +72,7 @@ from enum import Enum
 from typing import Any
 import random
 from .drummap import DRUMS_R
-from .util import NOTE_TYPE_TO_DURATION
+from .util import NOTE_TYPE_GRID_QUANTIZE_MAP
 from .util import chord_to_midi
 
 # The wildcard pattern to specify all of something (e.g. for bars, beats, tracks)
@@ -139,7 +146,7 @@ class GranularityIndexGridError(Exception):
 class Grid:
     def __init__(self, granularity: Granularity = Granularity.EIGHTH):
         self.granularity: str = granularity.value
-        self.number_of_beats: int = int(NOTE_TYPE_TO_DURATION[self.granularity] * 4)
+        self.number_of_beats: int = int(NOTE_TYPE_GRID_QUANTIZE_MAP[self.granularity] * 4)
         self.grid: dict[int, dict[int, list[list[dict[str, Any]]]]] = {}
 
     def copy_to_end(
@@ -383,7 +390,7 @@ class Grid:
                             notes.append(duration_tmp)
                             if humanize_jitter:
                                 offsets.append(
-                                    random.choice("nnnnt")
+                                    random.choice(["n", "n", "n", "n", "t", "t", "e"])
                                 )  # TODO: not implemented yet
                             else:
                                 offsets.append("n")

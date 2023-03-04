@@ -1,38 +1,12 @@
 """
-Generate MIDI songs from the CLI.
+TODO
 """
-import argparse
-import random
-from .composer import Controller as ComposerController
-from .composer import Generator as ComposerGenerator
-from .drummer import Controller as DrumController
-from .drummer import Generator as DrumGenerator
-
-# --duration N
-# --bpm N
-# --out path.midi
-#
-#
-# --drums-out path
-# --composition-out path
-# --compositions N
-# --drums t|f
-# --composition-in path1,path2,...
-# --drums-in path1,path2,...
-# --drums-loop path1,path2,...
-# --composition-loop path1,path2,...
-
-
-def run(args):
-    composer: ComposerController = ComposerController(
-        tempo=args.bpm, total_duration=args.duration
-    )
-    generator: ComposerGenerator = composer.generator
-    drum_controller: DrumController = composer.drum_controller
-    drum_generator: DrumGenerator = drum_controller.generator
+# import argparse
+# import random
 
 
 def cli():
+    """
     parser = argparse.ArgumentParser(
         prog="mdcmp", description="Generate MIDI songs from the CLI", epilog=""
     )
@@ -51,3 +25,4 @@ def cli():
     )
     args = parser.parse_args()
     run(args)
+    """

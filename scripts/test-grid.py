@@ -52,7 +52,7 @@ def test3():
     grid.add(bars=[1,], tracks=[2,], beats=[0, 1, 2], value='Cmin7', is_chord=False, duration=1)
     # Instrument tracks
     grid.dump_grid()
-    grid.to_data()
+    grid.to_data(volume_jitter=10, humanize_jitter=True)
 
 
 if __name__ == '__main__':

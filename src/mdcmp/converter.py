@@ -5,7 +5,7 @@ from typing import Any
 from midiutil import MIDIFile
 
 from build.lib.mdcmp.exceptions import PitchNotFoundError
-from .util import NOTE_TYPE_MAP, KNOWN_MDC_FORMAT_VERSIONS
+from .constants import NOTE_TIME_MAP, KNOWN_MDC_FORMAT_VERSIONS
 from .exceptions import (
     MdcInvalidNoteError,
     MdcLineError,
@@ -55,12 +55,12 @@ class Converter:
         # Validate note types
         if isinstance(note_types, list):
             for note_type in note_types:
-                if note_type not in NOTE_TYPE_MAP.keys():
+                if note_type not in NOTE_TIME_MAP.keys():
                     raise MdcInvalidNoteError(f"Unknown note type: {note_type}")
         # Validate note_extras
         if isinstance(note_extras, list):
             for note_extra in note_extras:
-                if note_extra not in NOTE_TYPE_MAP.keys():
+                if note_extra not in NOTE_TIME_MAP.keys():
                     raise MdcInvalidNoteError(f"Unknown note extra: {note_extra}")
         # Validate pitches
         if isinstance(pitches, list):
@@ -96,7 +96,7 @@ class Converter:
             start_offset (float): The time offset in which the track starts.
         """
         timer: float = 0.0 + start_offset
-        increment: float = NOTE_TYPE_MAP.get(granularity, 0.0)
+        increment: float = NOTE_TIME_MAP.get(granularity, 0.0)
         if increment == 0.0:
             raise MdcInvalidGranularityError(f"Unknown granularity: {granularity}")
         for pattern in patterns:
@@ -118,13 +118,13 @@ class Converter:
             if isinstance(pitches, list):
                 for n, pitch in enumerate(pitches):
                     if isinstance(note_types, list):
-                        note_type = NOTE_TYPE_MAP.get(note_types[n], 0.0)
+                        note_type = NOTE_TIME_MAP.get(note_types[n], 0.0)
                     else:
-                        note_type = NOTE_TYPE_MAP.get(note_types, 0.0)
+                        note_type = NOTE_TIME_MAP.get(note_types, 0.0)
                     if isinstance(note_extras, list):
-                        note_extra = NOTE_TYPE_MAP.get(note_extras[n], 0.0)
+                        note_extra = NOTE_TIME_MAP.get(note_extras[n], 0.0)
                     else:
-                        note_extra = NOTE_TYPE_MAP.get(note_extras, 0.0)
+                        note_extra = NOTE_TIME_MAP.get(note_extras, 0.0)
                     if isinstance(volumes, list):
                         volume = volumes[n]
                     else:
@@ -135,8 +135,8 @@ class Converter:
 
             else:
                 # All items are a single value and not a list
-                note_type = NOTE_TYPE_MAP.get(note_types, 0.0)
-                note_extras = NOTE_TYPE_MAP.get(note_extras, 0.0)
+                note_type = NOTE_TIME_MAP.get(note_types, 0.0)
+                note_extras = NOTE_TIME_MAP.get(note_extras, 0.0)
                 self.midi.addNote(
                     self.track, 0, pitches, timer + note_extras, note_type, volumes
                 )
