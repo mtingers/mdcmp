@@ -82,6 +82,8 @@ class Converter:
                     )  # TODO
             else:
                 if isinstance(i, list):
+                    print('-'*80)
+                    print(f"p:{pitches} nt:{note_types} pads:{note_paddings} velocities:{velocities} i:{i}")
                     raise MdcAlignmentError(
                         "Invalid data alignment to single pitch."
                     )  # TODO

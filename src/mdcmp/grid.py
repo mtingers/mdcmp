@@ -455,6 +455,9 @@ class Grid:
                             "data"
                         ] += f" 0,{self.granularity},n,0,n,n,n,n,n,n,n;"
                 else:
+                    # TODO: Something seems wrong here (see the list reductions below)
+                    # sometimes it causes a program crash on the converter because of invalid data
+                    # generated (without the IsChord list fixups below)!
                     for beat in range(self.number_of_beats):
                         pitches = []
                         notes = []
@@ -517,14 +520,17 @@ class Grid:
                             velocities.append(new_velocity)
                             if j["is_chord"] == IsChord.NO:
                                 velocities = [new_velocity]
-                            volumes.append(event_translate(j["volume"]))
-                            pitchwheels.append(
-                                event_translate(pitchwheel_to_midi(j["pitchwheel"]))
-                            )
-                            modwheels.append(event_translate(j["modwheel"]))
-                            expressions.append(event_translate(j["expression"]))
-                            sustains.append(sustain_toggle(j["sustain"]))
-                            pans.append(event_translate(pan_to_midi(j["pan"])))
+                                offsets = [offsets[-1]]
+                                notes = [notes[-1]]
+                            volumes = [event_translate(j["volume"])]
+                            # volumes.append(event_translate(j["volume"]))
+                            # pitchwheels.append(
+                            # )
+                            pitchwheels = [event_translate(pitchwheel_to_midi(j["pitchwheel"]))]
+                            modwheels = [event_translate(j["modwheel"])]
+                            expressions = [event_translate(j["expression"])]
+                            sustains = [sustain_toggle(j["sustain"])]
+                            pans = [event_translate(pan_to_midi(j["pan"]))]
                         # Now join all of these lists into MDC format lists
                         # Maybe set these in a wrapper to compress if all are the same.?
                         result[track]["data"] += (

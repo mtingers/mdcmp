@@ -60,6 +60,7 @@ def test4():
             octave=4,
             pan=15,
         )
+        # Add rest for copy_to_end below (otherwise it will not work)
         grid.add(
             bars=[bar], tracks=[3], beats=[0], value=value,
             is_chord=IsChord.NO, duration=0, velocity=0, pan=-20, octave=5
@@ -71,11 +72,13 @@ def test4():
     grid.add(bars=[7], tracks=[0, ], beats=[6, 7], value="hat2", duration=1)
     grid.add(bars=[7], tracks=[0, ], beats=[6], value="kick1", duration=2)
     grid.add(bars=[7], tracks=[0, ], beats=[7], value="snare2", duration=2)
-    grid.save('test.mdc', velocity_jitter=13, humanize_jitter=False)
+    grid.copy_to_end(bars=[0, 1, 2, 3, 4, 5, 6, 7], tracks=[0, 1, 2, 3], count=20)
+    # grid.save('data/mdc/misc/test.mdc', velocity_jitter=13, humanize_jitter=False)
+    grid.save('data/mdc/misc/test.mdc', velocity_jitter=10, humanize_jitter=False)
     # Convert the test.mdc file to test.midi file
     converter = Converter(tempo=100)
-    converter.convert("test.mdc")
-    converter.save("test.midi")
+    converter.convert("data/mdc/misc/test.mdc")
+    converter.save("midi/test.midi")
 
 
 if __name__ == "__main__":
