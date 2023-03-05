@@ -3,9 +3,10 @@ Translate MDC files to MIDI files.
 """
 from typing import Any
 from midiutil import MIDIFile
+from mingus.core.notes import RangeError
 
 from build.lib.mdcmp.exceptions import PitchNotFoundError
-from .constants import NOTE_TIME_MAP, KNOWN_MDC_FORMAT_VERSIONS
+from .constants import NOTE_TIME_MAP, KNOWN_MDC_FORMAT_VERSIONS, EVENT_MAP
 from .exceptions import (
     MdcInvalidNoteError,
     MdcLineError,
@@ -84,7 +85,7 @@ class Converter:
                         "Invalid data alignment to single pitch."
                     )  # TODO
 
-    def _convert_patterns(
+    def _convert_patterns_v1(
         self, patterns: list[str], granularity: str, track_type: str, start_offset: float
     ):
         """
@@ -105,7 +106,19 @@ class Converter:
             # Forgive extra spacing
             if not pattern.strip():
                 continue
-            pitches, note_types, note_paddings, velocities = pattern.split(",")
+
+            (
+                pitches,
+                note_types,
+                note_paddings,
+                velocities,
+                volume,
+                pitchwheel,
+                modwheel,
+                expression,
+                sustain,
+                pan
+            ) = pattern.split(",")
             try:
                 pitches = self._split_data(pitches, int)
                 note_types = self._split_data(note_types, str)
@@ -115,6 +128,31 @@ class Converter:
                 raise Exception(f"Unknown error parsing mdc data: {err}")
 
             self._validate(pitches, note_types, note_paddings, velocities)
+            event_items = {
+                'volume': volume,
+                'pitchwheel': pitchwheel,
+                'modwheel': modwheel,
+                'expression': expression,
+                'sustain': sustain,
+                'pan': pan,
+            }
+            # validate track automations
+            for item in event_items.values():
+                if item == "n":
+                    continue
+                item = int(item)
+                if item < 0 or item > 127:
+                    raise RangeError(f"Value is out of range (0-127): {item}")
+
+            # Handle events first
+            for event_name, value in event_items.items():
+                event_int: int | None = EVENT_MAP.get(event_name, 0)
+                if event_int < 1:
+                    continue  # Raise exception?
+                if event_name == "pitchwheel":
+                    self.midi.addPitchWheelEvent(self.track, channel, timer, value)
+                else:
+                    self.midi.addControllerEvent(self.track, channel, timer, event_int, value)
 
             # Layer the pitches and settings onto a single MIDI track
             if isinstance(pitches, list):
@@ -145,6 +183,25 @@ class Converter:
             # Increment the timer according to the grid granularity
             timer += increment
 
+    def _convert_v1(self, data: list[str]):
+        """Version 1 format"""
+        """
+        """
+
+        for line_num, i in enumerate(data):
+            # Forgive blank lines
+            if not i.strip():
+                continue
+            if "|" not in i:
+                raise MdcLineError(f"Invalid line {line_num}: {i}")
+            try:
+                _, track_type, granularity, offset, mdata = i.split("|")
+            except ValueError:
+                raise MdcFormatError(f"Invalid format on line: {line_num}")
+            patterns = mdata.strip().replace("; ", "").split(";")
+            self._convert_patterns_v1(patterns, granularity, track_type, float(offset))
+            self.track += 1
+
     def convert(self, path_to_mdc_file: str):
         """
         Convert a composer format file to midi.
@@ -167,21 +224,10 @@ class Converter:
                 raise MdcUnknownVersionrror(
                     f"Unknown mdc format version: {mdc_version}"
                 )
+            elif mdc_version == 1:
+                self._convert_v1(data)
         except ValueError:
             raise MdcFormatError("Invalid header. Is this an mdc file?")
-        for line_num, i in enumerate(data):
-            # Forgive blank lines
-            if not i.strip():
-                continue
-            if "|" not in i:
-                raise MdcLineError(f"Invalid line {line_num}: {i}")
-            try:
-                _, track_type, granularity, offset, data = i.split("|")
-            except ValueError:
-                raise MdcFormatError(f"Invalid format on line: {line_num}")
-            patterns = data.strip().replace("; ", "").split(";")
-            self._convert_patterns(patterns, granularity, track_type, float(offset))
-            self.track += 1
 
     def save(self, path: str):
         """
