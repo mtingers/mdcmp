@@ -25,6 +25,8 @@ TODO:
     - Spread a chord across beats:
         grid.chord_spread(value='Cm7', track=3, start_bar=1, start_beat=1, spacer=1)
     - Maybe add resphape(), but this could be difficult:
+        grid.reshape(new_granularity=Granularity.EIGHTH)
+        ... add beats ...
         grid.reshape(new_granularity=Granularity.SIXTEENTH)
 
 
@@ -97,7 +99,13 @@ from typing import Any
 import random
 from .drummap import DRUMS_R
 from .util import NOTE_TYPE_GRID_QUANTIZE_MAP
-from .util import chord_to_midi, sustain_toggle, event_translate, pan_to_midi, pitchwheel_to_midi
+from .util import (
+    chord_to_midi,
+    sustain_toggle,
+    event_translate,
+    pan_to_midi,
+    pitchwheel_to_midi,
+)
 
 # The wildcard pattern to specify all of something (e.g. for bars, beats, tracks)
 # This is like instead of specifying [1,2,3] you can do a '*' glob to specify all.
@@ -105,10 +113,11 @@ WILDCARD = -1
 
 DURATION_GRANULARITY_MAP = {
     # granularity: {duration: note, ...}
-    "h": {1: "h", 2: "w", 3: "w.", 4: "W"},
-    "q": {1: "q", 2: "h", 3: "h.", 4: "w", 5: "w.", 6: "W"},
-    "e": {1: "e", 2: "q", 3: "q.", 4: "h", 5: "h.", 6: "w", 7: "w.", 8: "W"},
+    "h": {0: "n", 1: "h", 2: "w", 3: "w.", 4: "W"},
+    "q": {0: "n", 1: "q", 2: "h", 3: "h.", 4: "w", 5: "w.", 6: "W"},
+    "e": {0: "n", 1: "e", 2: "q", 3: "q.", 4: "h", 5: "h.", 6: "w", 7: "w.", 8: "W"},
     "s": {
+        0: "n",
         1: "s",
         2: "e",
         3: "e.",
@@ -121,6 +130,7 @@ DURATION_GRANULARITY_MAP = {
         10: "W",
     },
     "t": {
+        0: "n",
         1: "t",
         2: "s",
         3: "s.",
@@ -170,22 +180,26 @@ class GranularityIndexGridError(Exception):
 def _compress_mdc_part(items: list, entire_track_event: bool = False) -> str:
     tmp = list(map(str, items))
     if len(set(tmp)) < 2:
-        return '!'.join(set(tmp))
+        return "!".join(set(tmp))
     # If this applies to the entire track, filter out "n" values and flatten into only 1 value
     if entire_track_event:
         return list(filter(lambda x: (x != "n"), tmp))[-1]
-    return '!'.join(tmp)
+    return "!".join(tmp)
 
 
 class Grid:
-    def __init__(self, granularity: Granularity = Granularity.EIGHTH, beats_per_measure: int = 4):
+    def __init__(
+        self, granularity: Granularity = Granularity.EIGHTH, beats_per_measure: int = 4
+    ):
         self.granularity: str = granularity.value
         self.number_of_beats: int = int(
             NOTE_TYPE_GRID_QUANTIZE_MAP[self.granularity] * beats_per_measure
         )
         self.grid: dict[int, dict[int, list[list[dict[str, Any]]]]] = {}
         if beats_per_measure != 4:
-            raise ValueError("Not implemented. This program currently only support 4/4 time.")
+            raise ValueError(
+                "Not implemented. This program currently only support 4/4 time."
+            )
 
     def copy_to_end(
         self,
@@ -437,7 +451,9 @@ class Grid:
                 # If the track doesn't exist in this bar, create resting space, zeroed out
                 if track not in self.grid[bar]:
                     for _ in range(self.number_of_beats):
-                        result[track]["data"] += f" 0,{self.granularity},n,0,n,n,n,n,n,n,n;"
+                        result[track][
+                            "data"
+                        ] += f" 0,{self.granularity},n,0,n,n,n,n,n,n,n;"
                 else:
                     for beat in range(self.number_of_beats):
                         pitches = []
@@ -453,11 +469,15 @@ class Grid:
                         # collect pitches, collect notes, collect offsets, collect velocities
                         if not self.grid[bar][track]:
                             # add rest beat to keep timing alignment
-                            result[track]["data"] += f" 0,{self.granularity},n,0,n,n,n,n,n,n;"
+                            result[track][
+                                "data"
+                            ] += f" 0,{self.granularity},n,0,n,n,n,n,n,n;"
                             continue
                         if not self.grid[bar][track][beat]:
                             # add rest beat to keep timing alignment
-                            result[track]["data"] += f" 0,{self.granularity},n,0,n,n,n,n,n,n;"
+                            result[track][
+                                "data"
+                            ] += f" 0,{self.granularity},n,0,n,n,n,n,n,n;"
                             continue
 
                         # self.grid[bar][track][beat][i]["sustain"] = sustain
@@ -484,7 +504,9 @@ class Grid:
                             notes.append(duration_tmp)
                             if humanize_jitter:
                                 offsets.append(
-                                    random.choice(["n", "n", "n", "n", "n", "H", "H", "H", "S"])
+                                    random.choice(
+                                        ["n", "n", "n", "n", "n", "H", "H", "H", "S"]
+                                    )
                                 )
                             else:
                                 offsets.append("n")
@@ -493,6 +515,8 @@ class Grid:
                             if new_velocity < 0:
                                 new_velocity = j["velocity"]
                             velocities.append(new_velocity)
+                            if j["is_chord"] == IsChord.NO:
+                                velocities = [new_velocity]
                             volumes.append(event_translate(j["volume"]))
                             pitchwheels.append(
                                 event_translate(pitchwheel_to_midi(j["pitchwheel"]))
@@ -500,9 +524,7 @@ class Grid:
                             modwheels.append(event_translate(j["modwheel"]))
                             expressions.append(event_translate(j["expression"]))
                             sustains.append(sustain_toggle(j["sustain"]))
-                            pans.append(
-                                event_translate(pan_to_midi(j["pan"]))
-                            )
+                            pans.append(event_translate(pan_to_midi(j["pan"])))
                         # Now join all of these lists into MDC format lists
                         # Maybe set these in a wrapper to compress if all are the same.?
                         result[track]["data"] += (
@@ -520,9 +542,8 @@ class Grid:
         output: str = "1\n"
         for i in result.values():
             output += f"{i['meta']}{i['data']}\n"
-        import pprint
-
-        pprint.pprint(result)
+        # import pprint
+        # pprint.pprint(result)
         return output
 
     def save(self, path: str, velocity_jitter: int = 5, humanize_jitter: bool = False):

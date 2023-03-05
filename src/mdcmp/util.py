@@ -77,4 +77,3 @@ def event_translate(value: int | None) -> str:
     if value is None:
         return "n"
     return str(value)
-

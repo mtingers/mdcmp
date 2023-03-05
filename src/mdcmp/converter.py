@@ -87,7 +87,11 @@ class Converter:
                     )  # TODO
 
     def _convert_patterns_v1(
-        self, patterns: list[str], granularity: str, track_type: str, start_offset: float
+        self,
+        patterns: list[str],
+        granularity: str,
+        track_type: str,
+        start_offset: float,
     ):
         """
         Convert a single line of the composer format data to midi.
@@ -119,10 +123,12 @@ class Converter:
                     modwheel,
                     expression,
                     sustain,
-                    pan
+                    pan,
                 ) = pattern.split(",")
             except ValueError as err:
-                raise Exception(f"Failed to parse pattern (len={len(pattern.split(','))}): {pattern}    err={err}")
+                raise Exception(
+                    f"Failed to parse pattern (len={len(pattern.split(','))}): {pattern}    err={err}"
+                )
             try:
                 pitches = self._split_data(pitches, int)
                 note_types = self._split_data(note_types, str)
@@ -133,12 +139,12 @@ class Converter:
 
             self._validate(pitches, note_types, note_paddings, velocities)
             event_items = {
-                'volume': volume,
-                'pitchwheel': pitchwheel,
-                'modwheel': modwheel,
-                'expression': expression,
-                'sustain': sustain,
-                'pan': pan,
+                "volume": volume,
+                "pitchwheel": pitchwheel,
+                "modwheel": modwheel,
+                "expression": expression,
+                "sustain": sustain,
+                "pan": pan,
             }
             # validate track automations
             for item in event_items.values():
@@ -153,13 +159,15 @@ class Converter:
                 event_int: int | None = EVENT_MAP.get(event_name, 0)
                 if event_int is not None and event_int < 1:
                     continue  # Raise exception?
-                if value in ("n", ):
+                if value in ("n",):
                     continue
                 value = int(value)
                 if event_name == "pitchwheel":
                     self.midi.addPitchWheelEvent(self.track, channel, timer, value)
                 else:
-                    self.midi.addControllerEvent(self.track, channel, timer, event_int, value)
+                    self.midi.addControllerEvent(
+                        self.track, channel, timer, event_int, value
+                    )
 
             # Layer the pitches and settings onto a single MIDI track
             if isinstance(pitches, list):
@@ -183,7 +191,12 @@ class Converter:
                     ))
                     """
                     self.midi.addNote(
-                        self.track, channel, pitch, timer + note_padding, note_type, velocity
+                        self.track,
+                        channel,
+                        pitch,
+                        timer + note_padding,
+                        note_type,
+                        velocity,
                     )
 
             else:
@@ -197,7 +210,12 @@ class Converter:
                 ))
                 """
                 self.midi.addNote(
-                    self.track, channel, pitches, timer + note_paddings, note_type, velocities
+                    self.track,
+                    channel,
+                    pitches,
+                    timer + note_paddings,
+                    note_type,
+                    velocities,
                 )
             # Increment the timer according to the grid granularity
             timer += increment
@@ -248,9 +266,7 @@ class Converter:
         if mdc_version == 1:
             self._convert_v1(data[1:])
         else:
-            raise MdcUnknownVersionError(
-                f"Unknown mdc format version: {mdc_version}"
-            )
+            raise MdcUnknownVersionError(f"Unknown mdc format version: {mdc_version}")
 
     def save(self, path: str):
         """

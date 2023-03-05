@@ -21,7 +21,7 @@ NOTE_TIME_MAP = {
     "t.": 0.1875,
     "t": 0.125,
     "S": 0.0625,
-    "H": 0.0625/2,
+    "H": 0.0625 / 2,
     "0": 0.0,
     "n": 0.0,
 }
@@ -95,12 +95,12 @@ EVENT_EXPRESSION = 11
 EVENT_SUSTAIN = 64
 # Map these values out for easy access
 EVENT_MAP = {
-    'volume': EVENT_VOLUME,
-    'pitchwheel': None,  # This is a separate function call
-    'modwheel': EVENT_MODWHEEL,
-    'expression': EVENT_EXPRESSION,
-    'sustain': EVENT_SUSTAIN,
-    'pan': EVENT_PAN,
+    "volume": EVENT_VOLUME,
+    "pitchwheel": None,  # This is a separate function call
+    "modwheel": EVENT_MODWHEEL,
+    "expression": EVENT_EXPRESSION,
+    "sustain": EVENT_SUSTAIN,
+    "pan": EVENT_PAN,
 }
 
 # min/max of MIDI volume integer values
