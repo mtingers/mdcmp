@@ -13,42 +13,42 @@ import sys
 
 
 def kick():
-    data = 'kick1|0|'
+    data = "kick1|0|"
     for _ in range(100):
-        data += 'h,0,50;'
+        data += "h,0,50;"
     return data
 
 
 def floortom():
-    data = 'lowfloortom|0|'
+    data = "lowfloortom|0|"
     for _ in range(100):
-        data += 'w,0,100;'
+        data += "w,0,100;"
     return data
 
 
 def hat():
-    data = 'hat1|0|'
+    data = "hat1|0|"
     for _ in range(200):
-        data += 'e,0,50;'
+        data += "e,0,50;"
     return data
 
 
 def snare():
-    data = 'snare1|1|;'
+    data = "snare1|1|;"
     for i in range(1, 100):
         if i % 8 == 0 and i > 0:
-            data += 'e,0,50;e,t,80;e,0,0;e,t,0;'
+            data += "e,0,50;e,t,80;e,0,0;e,t,0;"
         else:
-            data += 'h,0,50;'
+            data += "h,0,50;"
     return data
 
 
 def main():
     gens = (kick, snare, hat, floortom)
-    data = '\n'.join([i() for i in gens])
-    with open(sys.argv[1], 'w') as fd:
+    data = "\n".join([i() for i in gens])
+    with open(sys.argv[1], "w") as fd:
         fd.write(data)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

@@ -49,19 +49,19 @@ class Converter:
         self,
         pitches: list[int] | int,
         note_types: list[str] | str,
-        note_extras: list[str] | str,
-        volumes: list[int] | int,
+        note_paddings: list[str] | str,
+        velocities: list[int] | int,
     ):
         # Validate note types
         if isinstance(note_types, list):
             for note_type in note_types:
                 if note_type not in NOTE_TIME_MAP.keys():
                     raise MdcInvalidNoteError(f"Unknown note type: {note_type}")
-        # Validate note_extras
-        if isinstance(note_extras, list):
-            for note_extra in note_extras:
-                if note_extra not in NOTE_TIME_MAP.keys():
-                    raise MdcInvalidNoteError(f"Unknown note extra: {note_extra}")
+        # Validate note_paddings
+        if isinstance(note_paddings, list):
+            for note_padding in note_paddings:
+                if note_padding not in NOTE_TIME_MAP.keys():
+                    raise MdcInvalidNoteError(f"Unknown note extra: {note_padding}")
         # Validate pitches
         if isinstance(pitches, list):
             for pitch in pitches:
@@ -72,7 +72,7 @@ class Converter:
                 raise PitchNotFoundError(f"Invalid pitch: {pitches}")
 
         # Validate list sizes match len(pitches)
-        for i in (note_types, note_extras, volumes):
+        for i in (note_types, note_paddings, velocities):
             if isinstance(pitches, list):
                 if isinstance(i, list) and len(i) != len(pitches):
                     raise MdcAlignmentError(
@@ -85,34 +85,36 @@ class Converter:
                     )  # TODO
 
     def _convert_patterns(
-        self, patterns: list[str], granularity: str, start_offset: float
+        self, patterns: list[str], granularity: str, track_type: str, start_offset: float
     ):
         """
         Convert a single line of the composer format data to midi.
 
         Args:
             patterns (list[str]): The data section of the MDC format in list format.
+            granularity (str): The grid granularity to quantize to.
             track_type (str): Describes the type of track. Either "drum" or "instrument".
             start_offset (float): The time offset in which the track starts.
         """
         timer: float = 0.0 + start_offset
         increment: float = NOTE_TIME_MAP.get(granularity, 0.0)
+        channel: int = 9 if track_type == "drum" else 0
         if increment == 0.0:
             raise MdcInvalidGranularityError(f"Unknown granularity: {granularity}")
         for pattern in patterns:
             # Forgive extra spacing
             if not pattern.strip():
                 continue
-            pitches, note_types, note_extras, volumes = pattern.split(",")
+            pitches, note_types, note_paddings, velocities = pattern.split(",")
             try:
                 pitches = self._split_data(pitches, int)
                 note_types = self._split_data(note_types, str)
-                note_extras = self._split_data(note_extras, str)
-                volumes = self._split_data(volumes, int)
+                note_paddings = self._split_data(note_paddings, str)
+                velocities = self._split_data(velocities, int)
             except Exception as err:
                 raise Exception(f"Unknown error parsing mdc data: {err}")
 
-            self._validate(pitches, note_types, note_extras, volumes)
+            self._validate(pitches, note_types, note_paddings, velocities)
 
             # Layer the pitches and settings onto a single MIDI track
             if isinstance(pitches, list):
@@ -121,24 +123,24 @@ class Converter:
                         note_type = NOTE_TIME_MAP.get(note_types[n], 0.0)
                     else:
                         note_type = NOTE_TIME_MAP.get(note_types, 0.0)
-                    if isinstance(note_extras, list):
-                        note_extra = NOTE_TIME_MAP.get(note_extras[n], 0.0)
+                    if isinstance(note_paddings, list):
+                        note_padding = NOTE_TIME_MAP.get(note_paddings[n], 0.0)
                     else:
-                        note_extra = NOTE_TIME_MAP.get(note_extras, 0.0)
-                    if isinstance(volumes, list):
-                        volume = volumes[n]
+                        note_padding = NOTE_TIME_MAP.get(note_paddings, 0.0)
+                    if isinstance(velocities, list):
+                        velocity = velocities[n]
                     else:
-                        volume = volumes
+                        velocity = velocities
                     self.midi.addNote(
-                        self.track, 0, pitch, timer + note_extra, note_type, volume
+                        self.track, channel, pitch, timer + note_padding, note_type, velocity
                     )
 
             else:
                 # All items are a single value and not a list
                 note_type = NOTE_TIME_MAP.get(note_types, 0.0)
-                note_extras = NOTE_TIME_MAP.get(note_extras, 0.0)
+                note_paddings = NOTE_TIME_MAP.get(note_paddings, 0.0)
                 self.midi.addNote(
-                    self.track, 0, pitches, timer + note_extras, note_type, volumes
+                    self.track, channel, pitches, timer + note_paddings, note_type, velocities
                 )
             # Increment the timer according to the grid granularity
             timer += increment
@@ -174,11 +176,11 @@ class Converter:
             if "|" not in i:
                 raise MdcLineError(f"Invalid line {line_num}: {i}")
             try:
-                _, _, granularity, offset, data = i.split("|")
+                _, track_type, granularity, offset, data = i.split("|")
             except ValueError:
                 raise MdcFormatError(f"Invalid format on line: {line_num}")
             patterns = data.strip().replace("; ", "").split(";")
-            self._convert_patterns(patterns, granularity, float(offset))
+            self._convert_patterns(patterns, granularity, track_type, float(offset))
             self.track += 1
 
     def save(self, path: str):

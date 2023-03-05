@@ -30,26 +30,52 @@ TODO:
 
 Below is a diagram of how these are layered using a drum and instrument composition:
 
-    ###################################################
+
     track-1:               bar-1            bar-2
     track-1:      +-----------------------------------+
-    track-1:  time| 0 1 2 3 4 5 6 7 8 | 1 2 3 4 5 6 7 |
+    track-1:  time| 0 1 2 3 4 5 6 7 | 0 1 2 3 4 5 6 7 |
     track-1:      +-----------------------------------+
     track-1:  kick| k       k       | k       k       |
     track-1: snare|     s       s   |     s       s   |
     track-1:   hat| h h h h h h h h | h h h h h h h h |
     track-1:      +-----------------------------------+
-    ###################################################
+    ===================================================
     track-2:               bar-1            bar-2
     track-2:      +-----------------------------------+
-    track-2:  time| 0 1 2 3 4 5 6 7 8 | 1 2 3 4 5 6 7 |
+    track-2:  time| 0 1 2 3 4 5 6 7 | 0 1 2 3 4 5 6 7 |
     track-2:      +-----------------------------------+
     track-2:      | C               |                 |
     track-2:      | Eb  Eb          |     Eb          |
     track-2:      | G               |                 |
     track-2:      | Bb              |                 |
     track-2:      +-----------------------------------+
-    ###################################################
+
+---------------------------------------------------------------------------------------------------
+TODO: Implement the following automation controller.  Right now it is grouped with the track data,
+but this causes issues if multiple calls to the same bar:track:beat are called. It currently
+takes the last call's event and ignores the others. Example:
+
+    # This will take the last volume value "50" and is confusing since it seems like hat1/snare1
+    # have an independent volume, but it is the entire volume of the track:
+    grid.add(bars=[1,], tracks=[0,], beats=[1], value="hat1", duration=1, volume=100)
+    grid.add(bars=[1,], tracks=[0,], beats=[1], value="snare1", duration=1, volume=50)
+
+TODO:
+And each track is assigned an automation controller to change the entire track settings for volume,
+pan, modwheel, pitchwheel, expression, and sustain.  Example:
+
+    controller:                    bar-1            bar-2
+    controller:           +-----------------------------------+
+    controller:       time| 0 1 2 3 4 5 6 7 | 0 1 2 3 4 5 6 7 |
+    controller:           +-----------------------------------+
+    controller:        pan| 5   0   -5      | -9              | -64 - +64
+    controller: pitchwheel|                 |                 | -64 - +64
+    controller:     volume|                 |                 | 0 - 127
+    controller:   modwheel|                 |                 | 0 - 127
+    controller: expression|                 |                 | 0 - 127
+    controller:    sustain| y               | n               | 0=off, >=64=on
+    controller:           +-----------------------------------+
+---------------------------------------------------------------------------------------------------
 
 Grid datastructure:
     grid = {
@@ -57,12 +83,10 @@ Grid datastructure:
             0:                          <-- track
             [                           <-- beat
                 {                       <-- metadata
-                    'volume': N,
+                    'velocity': N,
                     'duration': N,
                     'value': 'X',
-                    # ignored for drums:
-                    'is_chord': 0 | 1 | -1,
-                    'octave': N,
+                    ...
                 }
             ],
         }
@@ -73,7 +97,7 @@ from typing import Any
 import random
 from .drummap import DRUMS_R
 from .util import NOTE_TYPE_GRID_QUANTIZE_MAP
-from .util import chord_to_midi
+from .util import chord_to_midi, sustain_toggle, event_translate, pan_to_midi, pitchwheel_to_midi
 
 # The wildcard pattern to specify all of something (e.g. for bars, beats, tracks)
 # This is like instead of specifying [1,2,3] you can do a '*' glob to specify all.
@@ -143,13 +167,25 @@ class GranularityIndexGridError(Exception):
     """The specified beat was greater than the granularity of the grid."""
 
 
+def _compress_mdc_part(items: list, entire_track_event: bool = False) -> str:
+    tmp = list(map(str, items))
+    if len(set(tmp)) < 2:
+        return '!'.join(set(tmp))
+    # If this applies to the entire track, filter out "n" values and flatten into only 1 value
+    if entire_track_event:
+        return list(filter(lambda x: (x != "n"), tmp))[-1]
+    return '!'.join(tmp)
+
+
 class Grid:
-    def __init__(self, granularity: Granularity = Granularity.EIGHTH):
+    def __init__(self, granularity: Granularity = Granularity.EIGHTH, beats_per_measure: int = 4):
         self.granularity: str = granularity.value
         self.number_of_beats: int = int(
-            NOTE_TYPE_GRID_QUANTIZE_MAP[self.granularity] * 4
+            NOTE_TYPE_GRID_QUANTIZE_MAP[self.granularity] * beats_per_measure
         )
         self.grid: dict[int, dict[int, list[list[dict[str, Any]]]]] = {}
+        if beats_per_measure != 4:
+            raise ValueError("Not implemented. This program currently only support 4/4 time.")
 
     def copy_to_end(
         self,
@@ -185,8 +221,15 @@ class Grid:
                                 beats=[beat],
                                 value=d["value"],
                                 duration=d["duration"],
-                                volume=d["volume"],
+                                expression=d["expression"],
                                 is_chord=d["is_chord"],
+                                modwheel=d["modwheel"],
+                                octave=d["octave"],
+                                pan=d["pan"],
+                                pitchwheel=d["pitchwheel"],
+                                sustain=d["sustain"],
+                                velocity=d["velocity"],
+                                volume=d["volume"],
                             )
                 next_bar_index += 1
 
@@ -198,10 +241,37 @@ class Grid:
         value: str = "",
         # duration lists set each beat duration.
         duration: int | list[int] = 1,
-        volume: int = 50,
+        velocity: int = 50,
         octave: int = 3,
+        volume: int | None = None,
+        pitchwheel: int | None = None,
+        modwheel: int | None = None,
+        expression: int | None = None,
+        pan: int | None = None,
+        sustain: bool | None = None,
         is_chord: IsChord = IsChord.NO,
     ):
+        """
+        Add grid item(s).
+
+        Args:
+            bars (list[int] | None): ...
+            tracks (list[int] | None): ...
+            beats (list[int] | None): ...
+            value (str): ...
+            duration (list[int] | None,  default 1): ...
+            velocity (int, default 50): ...
+            octave (int, default 3)
+            volume (int | None): ...
+            pitchwheel (int | None): ...
+            modwheel (int | None): ...
+            expression (int | None): ...
+            pan (int | None): ...
+            sustain (int | None): ...
+            is_chord (IsChord enum): ...
+
+        TODO: Validation, see constants *_RANGE values.
+        """
         if not bars or not tracks or not beats:
             raise RequiredArgsGridError(
                 "bars, tracks, and beats arguments must be set."
@@ -235,26 +305,37 @@ class Grid:
                                 duration_tmp = duration
                             self.grid[bar][track][wildcard].append(
                                 {
-                                    "volume": volume,
-                                    "octave": octave,
                                     "duration": duration_tmp,
-                                    "value": value,
+                                    "expression": expression,
                                     "is_chord": is_chord,
+                                    "modwheel": modwheel,
+                                    "octave": octave,
+                                    "pan": pan,
+                                    "pitchwheel": pitchwheel,
+                                    "sustain": sustain,
+                                    "value": value,
+                                    "velocity": velocity,
+                                    "volume": volume,
                                 }
                             )
                     else:
                         if isinstance(duration, list):
-                            print(beat, duration)
                             duration_tmp = duration[beat_n]
                         else:
                             duration_tmp = duration
                         self.grid[bar][track][beat].append(
                             {
-                                "volume": volume,
-                                "octave": octave,
                                 "duration": duration_tmp,
-                                "value": value,
+                                "expression": expression,
                                 "is_chord": is_chord,
+                                "modwheel": modwheel,
+                                "octave": octave,
+                                "pan": pan,
+                                "pitchwheel": pitchwheel,
+                                "sustain": sustain,
+                                "value": value,
+                                "velocity": velocity,
+                                "volume": volume,
                             }
                         )
 
@@ -264,12 +345,18 @@ class Grid:
         tracks: list[int] | None = None,
         beats: list[int] | None = None,
         duration: int | list[int] | None = None,
-        volume: int = 50,
+        velocity: int = 50,
         octave: int = -1,
+        volume: int | None = None,
+        pitchwheel: int | None = None,
+        modwheel: int | None = None,
+        expression: int | None = None,
+        pan: int | None = None,
+        sustain: bool | None = None,
         is_chord: IsChord = IsChord.PRESERVE,
     ):
         """
-        Adjust the volume, duration, is_chord of the specified items
+        Adjust the velocity, duration, is_chord of the specified items
         """
         # grid.silence(beats=[7], bars=[2], duration=2, tracks=[2,3]) # maybe?
         if not bars or not tracks or not beats:
@@ -295,8 +382,14 @@ class Grid:
                             self.grid[bar][track][beat][i]["octave"] = octave
                         if duration_tmp:
                             self.grid[bar][track][beat][i]["duration"] = duration_tmp
-                        self.grid[bar][track][beat][i]["volume"] = volume
+                        self.grid[bar][track][beat][i]["velocity"] = velocity
                         self.grid[bar][track][beat][i]["is_chord"] = is_chord
+                        self.grid[bar][track][beat][i]["volume"] = volume
+                        self.grid[bar][track][beat][i]["pitchwheel"] = pitchwheel
+                        self.grid[bar][track][beat][i]["modwheel"] = modwheel
+                        self.grid[bar][track][beat][i]["expression"] = expression
+                        self.grid[bar][track][beat][i]["pan"] = pan
+                        self.grid[bar][track][beat][i]["sustain"] = sustain
 
     def fill_gaps(self):
         """Insert empty bars where gaps exist"""
@@ -315,14 +408,13 @@ class Grid:
         for track in tracks_list:
             for bar in bars_list:
                 if track not in self.grid[bar]:
-                    print("ADD:", bar, track)
                     self.grid[bar][track] = []
 
-    def to_data(self, volume_jitter: int = 5, humanize_jitter: bool = False) -> str:
+    def to_data(self, velocity_jitter: int = 5, humanize_jitter: bool = False) -> str:
         """Convert grid to MDC format data
 
         Args:
-            volume_jitter (int): Randomly volume adjust +-volume_jitter
+            velocity_jitter (int): Randomly velocity adjust +-velocity_jitter
             humanize_jitter (int): Randomly humanize note timings +-humanize_jitter
         Return:
             str: MDC data
@@ -345,23 +437,30 @@ class Grid:
                 # If the track doesn't exist in this bar, create resting space, zeroed out
                 if track not in self.grid[bar]:
                     for _ in range(self.number_of_beats):
-                        result[track]["data"] += f" 0,{self.granularity},n,0;"
+                        result[track]["data"] += f" 0,{self.granularity},n,0,n,n,n,n,n,n;"
                 else:
                     for beat in range(self.number_of_beats):
                         pitches = []
                         notes = []
                         offsets = []
+                        velocities = []
                         volumes = []
-                        # collect pitches, collect notes, collect offsets, collect volumes
+                        pitchwheels = []
+                        modwheels = []
+                        expressions = []
+                        sustains = []
+                        pans = []
+                        # collect pitches, collect notes, collect offsets, collect velocities
                         if not self.grid[bar][track]:
                             # add rest beat to keep timing alignment
-                            result[track]["data"] += f" 0,{self.granularity},n,0;"
+                            result[track]["data"] += f" 0,{self.granularity},n,0,n,n,n,n,n;"
                             continue
                         if not self.grid[bar][track][beat]:
                             # add rest beat to keep timing alignment
-                            result[track]["data"] += f" 0,{self.granularity},n,0;"
+                            result[track]["data"] += f" 0,{self.granularity},n,0,n,n,n,n,n;"
                             continue
 
+                        # self.grid[bar][track][beat][i]["sustain"] = sustain
                         for _, j in enumerate(self.grid[bar][track][beat]):
                             # convert to drum or chord or single pitch
                             if j["value"] in DRUMS_R:
@@ -379,13 +478,6 @@ class Grid:
                                 else:
                                     for p in pitch:
                                         pitches.append(p)
-                            # convert duration to whqst value
-                            # duration = 1, granularity = e
-                            # 1 = e -> e
-                            # 2 = e -> q
-                            # 3 = e -> q.
-                            # 4 = e -> h
-                            # 5 = e -> h.
                             duration_tmp = DURATION_GRANULARITY_MAP[self.granularity][
                                 j["duration"]
                             ]
@@ -396,17 +488,34 @@ class Grid:
                                 )  # TODO: not implemented yet
                             else:
                                 offsets.append("n")
-                            jitter = random.randint(-volume_jitter, volume_jitter)
-                            new_volume = j["volume"] + jitter
-                            if new_volume < 0:
-                                new_volume = j["volume"]
-                            volumes.append(new_volume)
+                            jitter = random.randint(-velocity_jitter, velocity_jitter)
+                            new_velocity = j["velocity"] + jitter
+                            if new_velocity < 0:
+                                new_velocity = j["velocity"]
+                            velocities.append(new_velocity)
+                            volumes.append(event_translate(j["volume"]))
+                            pitchwheels.append(
+                                event_translate(pitchwheel_to_midi(j["pitchwheel"]))
+                            )
+                            modwheels.append(event_translate(j["modwheel"]))
+                            expressions.append(event_translate(j["expression"]))
+                            sustains.append(sustain_toggle(j["sustain"]))
+                            pans.append(
+                                event_translate(pan_to_midi(j["pan"]))
+                            )
                         # Now join all of these lists into MDC format lists
+                        # Maybe set these in a wrapper to compress if all are the same.?
                         result[track]["data"] += (
-                            f" {'!'.join(map(str, pitches))},"
-                            f"{'!'.join(map(str, notes))},"
-                            f"{'!'.join(map(str, offsets))},"
-                            f"{'!'.join(map(str, volumes))};"
+                            f" {_compress_mdc_part(pitches)},"
+                            f"{_compress_mdc_part(notes)},"
+                            f"{_compress_mdc_part(offsets)},"
+                            f"{_compress_mdc_part(velocities)},"
+                            f"{_compress_mdc_part(volumes, entire_track_event=True)},"
+                            f"{_compress_mdc_part(pitchwheels, entire_track_event=True)},"
+                            f"{_compress_mdc_part(modwheels, entire_track_event=True)},"
+                            f"{_compress_mdc_part(expressions, entire_track_event=True)},"
+                            f"{_compress_mdc_part(sustains, entire_track_event=True)},"
+                            f"{_compress_mdc_part(pans, entire_track_event=True)};"
                         )
         output: str = "1\n"
         for i in result.values():
@@ -416,12 +525,12 @@ class Grid:
         pprint.pprint(result)
         return output
 
-    def save(self, path: str, volume_jitter: int = 5, humanize_jitter: bool = False):
+    def save(self, path: str, velocity_jitter: int = 5, humanize_jitter: bool = False):
         """Generate MDC format data and save to path"""
         with open(path, "w") as outfd:
             outfd.write(
                 self.to_data(
-                    volume_jitter=volume_jitter, humanize_jitter=humanize_jitter
+                    velocity_jitter=velocity_jitter, humanize_jitter=humanize_jitter
                 )
             )
 

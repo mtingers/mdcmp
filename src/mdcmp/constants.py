@@ -43,8 +43,20 @@ ACCIDENTALS = {
 ################################################################################
 # MIDI stuff
 # MIDI has a bit more than 10 octaves, but we will cap at 10
-OCTAVES = list(range(10))
+OCTAVES = list(range(11))
+
+# Event keys for addControllerEvent()
+EVENT_MODWHEEL = 1
+EVENT_VOLUME = 7
+EVENT_PAN = 10
+EVENT_EXPRESSION = 11
+EVENT_SUSTAIN = 64
+
 # min/max of MIDI volume integer values
-VOLUME_MIN = 0
-VOLUME_MAX = 127
-VOLUME_RANGE = (0, 127)
+VELOCITY_RANGE = list(range(0, 128))
+MODWHEEL_RANGE = list(range(0, 128))
+EXPRESSION_RANGE = list(range(0, 128))
+VOLUME_RANGE = list(range(0, 128))
+# humanized values -64 to 64 for easier control, instead of 0-N values
+PAN_RANGE = list(range(-64, 65))
+PITCHWHEEL_RANGE = list(range(-64, 65))

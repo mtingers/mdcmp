@@ -38,3 +38,43 @@ def note_type_to_offset(duration: float, note_type: str) -> float:
     """Calculate the offset of a note at a duration."""
     duration = float(duration * NOTE_TYPE_GRID_QUANTIZE_MAP[note_type])
     return duration
+
+
+def pitchwheel_to_midi(simple_value: int | None) -> int | None:
+    """Normalize pitch wheel values from -64 to 64 and convert to midi value"""
+    if simple_value is None:
+        return None
+    x: int = simple_value
+    if x > 64 or x < -64:
+        raise ValueError("simple_value must be between -64 and 64")
+    if x < 0 and x != 64:
+        return 128 * x
+    return (128 * x) - 1
+
+
+def pan_to_midi(simple_value: int | None) -> int | None:
+    """Normalize pan values from -64 to 64 and convert to midi value"""
+    if simple_value is None:
+        return None
+    x: int = simple_value
+    if x < -64 or x > 64:
+        raise ValueError("x must be between -64 and 64")
+    if x < 0 or x != 64:
+        return 64 + x
+    return (64 + x) - 1
+
+
+def sustain_toggle(value: bool | None) -> str:
+    """Sustain is either on or off. <64=off"""
+    if value is None:
+        return "n"
+    if value:
+        return "64"
+    return "0"
+
+
+def event_translate(value: int | None) -> str:
+    if value is None:
+        return "n"
+    return str(value)
+

@@ -40,8 +40,14 @@ reserved|track-type|granularity|start-offset| track-data...
         thirtysecond: "t"
     - Additional offset (list of char) -- Add an additional amount of time before the note
       position. A value of "n" for 0 or none can be specified in addition to the duration values.
-    - Volume (list of int) -- The volume of the position. A value from 0 (silent) to 127 (max MIDI
+    - Velocity (list of int) -- The velocity of the position. A value from 0 (silent) to 127 (max MIDI
       value).
+    - Volume (int) -- Overall volume of the track. "n" for noop.
+    - Pitchwheel (int) --Pitchwheel control. Humanized from -64 to 64. "n" for noop.
+    - Modwheel (int) -- Modulation control. 0 is off, otherwise a value 1-127. "n" for noop.
+    - Expression (int) -- Expression control. 0 is off, otherwise a value 1-127. "n" for noop.
+    - Sustain (int) -- Toggle 0=off, 1=on. "n" for noop.
+    - Pan (int) -- A range of -64 to 64. "n" for noop.
 
 Note that each track data is a list of X. Lists are delimited by `!`.  If a `!` is not specified,
 it will use a single value for all items previously supplied as a list or a single item.
@@ -55,14 +61,14 @@ of this will be two separate MIDI tracks.
 Create two instrument tracks on a quarter note grid:
 ```
 1
-_|instrument|q|0.0| 33!55!44,q,n,50!45!30; 60,q,n,45; 58,q,n,50;
-_|instrument|q|0.0| 33,q,n,20; 60,q,n,25; 28,q,n,20; 0,q,n,0;
+_|instrument|q|0.0| 33!55!44,q,n,50!45!30,n,n,n,n,n; 60,q,n,45,n,n,n,n,n; 58,q,n,50,n,n,n,n,n;
+_|instrument|q|0.0| 33,q,n,20,n,n,n,n,n; 60,q,n,25,n,n,n,n,n; 28,q,n,20,n,n,n,n,n; 0,q,n,0,n,n,n,n,n;
 ```
 
 
 This example creates a drum track and instrument track on an eighth note grid:
 ```
 1
-_|drum|e|0.0| 36!42!,q!e,n,50!40; 42,e,n,50; 38!42,q!e,n,50; 42,e,n,50;
-_|instrument|e|0.0| 33,e,n,50; 35,e,n,50; 33,e,n,50,1; 32,e,n,50;
+_|drum|e|0.0| 36!42!,q!e,n,50!40,n,n,n,n,n; 42,e,n,50,n,n,n,n,n; 38!42,q!e,n,50,n,n,n,n,n; 42,e,n,50,n,n,n,n,n;
+_|instrument|e|0.0| 33,e,n,50,n,n,n,n,n; 35,e,n,50,n,n,n,n,n; 33,e,n,50,1,n,n,n,n,n; 32,e,n,50,n,n,n,n,n;
 ```
