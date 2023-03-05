@@ -78,7 +78,7 @@ class Grid:
         bars: list[int] | None = None,
         tracks: list[int] | None = None,
         count: int = 1,
-        skip_error: bool = False,
+        strict: bool = False,
     ):
         """
         Copy bars and append to the end, in order, count times, for the tracks specified.
@@ -97,13 +97,13 @@ class Grid:
                 for track in tracks:
                     track_tmp = tmp.get(track)
                     if not track_tmp:
-                        if skip_error:
+                        if not strict:
                             continue
                         raise TrackIndexGridError((
                             f"Invalid track index specified: bar:{bar} track:{track}. "
                             "This usually means you specified a bar->track that does not exist. "
-                            "You can specify skip_error=True to skip these errors, but alignment "
-                            "may get off, which often causes dead space."
+                            "You can specify strict=False to skip these errors, but alignment "
+                            "may get off in some cases."
                         ))
                     for beat, data in enumerate(track_tmp):
                         for d in data:
