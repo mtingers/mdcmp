@@ -1,5 +1,6 @@
 from random import shuffle
-from mdcmp.grid import Grid, Granularity, WILDCARD, IsChord
+from mdcmp.grid import Grid, Granularity, IsChord
+from mdcmp.constants import ALL as ALL_ITEMS
 from mdcmp.converter import Converter
 from mingus.core import chords
 
@@ -23,16 +24,22 @@ def chord_spread(
         shuffle(chord_notes)
     elif reverse:
         chord_notes.reverse()
+    beat: int = 0
     for n, i in enumerate(chord_notes):
+        if n + beat_offset >= grid.number_of_beats:
+            print("FIXUP")
+            beat = 0
+            bar += 1
         grid.add(
-            bars=[bar], tracks=tracks, beats=[n+beat_offset], value=i,
+            bars=[bar], tracks=tracks, beats=[beat + beat_offset], value=i,
             is_chord=IsChord.NO, duration=duration, pan=pan, volume=volume, octave=octave
         )
+        beat += 1
 
 
 def test4():
     grid = Grid(granularity=Granularity.EIGHTH)
-    grid.add(bars=[0, 1, 2, 3], tracks=[0, ], beats=[WILDCARD], value="hat1", duration=1)
+    grid.add(bars=[0, 1, 2, 3], tracks=[0, ], beats=[ALL_ITEMS], value="hat1", duration=1)
     grid.add(bars=[0, 1, 2, 3], tracks=[0, ], beats=[0, 5], value="kick1", duration=2)
     grid.add(bars=[0, 1, 2, 3], tracks=[0, ], beats=[2, 6], value="snare1", duration=2)
     progression = ("Amin11", "D7", "Fmaj7", "Cmaj7")

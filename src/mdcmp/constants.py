@@ -38,10 +38,11 @@ NOTE_TYPE_GRID_QUANTIZE_MAP = {
 }
 DURATION_GRANULARITY_MAP = {
     # granularity: {duration: note, ...}
-    "h": {1: "h", 2: "w", 3: "w.", 4: "W"},
-    "q": {1: "q", 2: "h", 3: "h.", 4: "w", 5: "w.", 6: "W"},
-    "e": {1: "e", 2: "q", 3: "q.", 4: "h", 5: "h.", 6: "w", 7: "w.", 8: "W"},
+    "h": {0: "n", 1: "h", 2: "w", 3: "w.", 4: "W"},
+    "q": {0: "n", 1: "q", 2: "h", 3: "h.", 4: "w", 5: "w.", 6: "W"},
+    "e": {0: "n", 1: "e", 2: "q", 3: "q.", 4: "h", 5: "h.", 6: "w", 7: "w.", 8: "W"},
     "s": {
+        0: "n",
         1: "s",
         2: "e",
         3: "e.",
@@ -54,6 +55,7 @@ DURATION_GRANULARITY_MAP = {
         10: "W",
     },
     "t": {
+        0: "n",
         1: "t",
         2: "s",
         3: "s.",
@@ -68,7 +70,8 @@ DURATION_GRANULARITY_MAP = {
         12: "W",
     },
 }
-
+# wildcard for all of something (e.g. all tracks, bars, beats)
+ALL = -1
 ################################################################################
 # Notes and accidentals
 NOTES = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"]

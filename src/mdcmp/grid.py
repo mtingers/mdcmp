@@ -1,104 +1,15 @@
 """
 The goal of Grid() is to provide an easy way to generate and layer tracks of different types, then
-produce an MCD data file for processing.
+produce an mdc data file for processing.
 
-Key features:
-    - Layer multiple notes at one bar beat.
-    - Layer multiple tracks on top of each other.
-    - Easily copy and repeat bars.
-    - Run mass transformation on groups of bars and tracks.
-
-Notes:
-    - If bars 1,2 and 5 are created, the generated output will be a full rest/blank bar for bar 3-4.
-    - Notes are either classified as "drum" or "instrument".
-    - Note classification checks if value matches a drum name and uses the drum.  Otherwise, it will
-      attempt to translate the note or chord into a series of midi pitches when generating the MDC
-      data file.
-
-Granularity:
-When a grid is initially defined, it has a set granularity related to a type of note (e.g. half,
-quarter, eighth, sixteenth, or thirtysecond).  A bar will have N beats based off of this
-granularity.  For example, a granularity of half note only has 2 beats per bar, where a granularity
-of quarter note has 4, and eighth has 8 beats, etc.
-
-TODO:
-    - Spread a chord across beats:
-        grid.chord_spread(value='Cm7', track=3, start_bar=1, start_beat=1, spacer=1)
-    - Maybe add resphape(), but this could be difficult:
-        grid.reshape(new_granularity=Granularity.EIGHTH)
-        ... add beats ...
-        grid.reshape(new_granularity=Granularity.SIXTEENTH)
-
-
-Below is a diagram of how these are layered using a drum and instrument composition:
-
-
-    track-1:               bar-1            bar-2
-    track-1:      +-----------------------------------+
-    track-1:  time| 0 1 2 3 4 5 6 7 | 0 1 2 3 4 5 6 7 |
-    track-1:      +-----------------------------------+
-    track-1:  kick| k       k       | k       k       |
-    track-1: snare|     s       s   |     s       s   |
-    track-1:   hat| h h h h h h h h | h h h h h h h h |
-    track-1:      +-----------------------------------+
-    ===================================================
-    track-2:               bar-1            bar-2
-    track-2:      +-----------------------------------+
-    track-2:  time| 0 1 2 3 4 5 6 7 | 0 1 2 3 4 5 6 7 |
-    track-2:      +-----------------------------------+
-    track-2:      | C               |                 |
-    track-2:      | Eb  Eb          |     Eb          |
-    track-2:      | G               |                 |
-    track-2:      | Bb              |                 |
-    track-2:      +-----------------------------------+
-
----------------------------------------------------------------------------------------------------
-TODO: Implement the following automation controller.  Right now it is grouped with the track data,
-but this causes issues if multiple calls to the same bar:track:beat are called. It currently
-takes the last call's event and ignores the others. Example:
-
-    # This will take the last volume value "50" and is confusing since it seems like hat1/snare1
-    # have an independent volume, but it is the entire volume of the track:
-    grid.add(bars=[1,], tracks=[0,], beats=[1], value="hat1", duration=1, volume=100)
-    grid.add(bars=[1,], tracks=[0,], beats=[1], value="snare1", duration=1, volume=50)
-
-TODO:
-And each track is assigned an automation controller to change the entire track settings for volume,
-pan, modwheel, pitchwheel, expression, and sustain.  Example:
-
-    controller:                    bar-1            bar-2
-    controller:           +-----------------------------------+
-    controller:       time| 0 1 2 3 4 5 6 7 | 0 1 2 3 4 5 6 7 |
-    controller:           +-----------------------------------+
-    controller:        pan| 5   0   -5      | -9              | -64 - +64
-    controller: pitchwheel|                 |                 | -64 - +64
-    controller:     volume|                 |                 | 0 - 127
-    controller:   modwheel|                 |                 | 0 - 127
-    controller: expression|                 |                 | 0 - 127
-    controller:    sustain| y               | n               | 0=off, >=64=on
-    controller:           +-----------------------------------+
----------------------------------------------------------------------------------------------------
-
-Grid datastructure:
-    grid = {
-        0: {                            <-- bar
-            0:                          <-- track
-            [                           <-- beat
-                {                       <-- metadata
-                    'velocity': N,
-                    'duration': N,
-                    'value': 'X',
-                    ...
-                }
-            ],
-        }
-    }
+See: docs/GRID.md for notes on how this works.
 """
 from enum import Enum
 from typing import Any
 import random
+from mingus.core import chords
 from .drummap import DRUMS_R
-from .util import NOTE_TYPE_GRID_QUANTIZE_MAP
+from .constants import DURATION_GRANULARITY_MAP, NOTE_TYPE_GRID_QUANTIZE_MAP, ALL
 from .util import (
     chord_to_midi,
     sustain_toggle,
@@ -106,45 +17,6 @@ from .util import (
     pan_to_midi,
     pitchwheel_to_midi,
 )
-
-# The wildcard pattern to specify all of something (e.g. for bars, beats, tracks)
-# This is like instead of specifying [1,2,3] you can do a '*' glob to specify all.
-WILDCARD = -1
-
-DURATION_GRANULARITY_MAP = {
-    # granularity: {duration: note, ...}
-    "h": {0: "n", 1: "h", 2: "w", 3: "w.", 4: "W"},
-    "q": {0: "n", 1: "q", 2: "h", 3: "h.", 4: "w", 5: "w.", 6: "W"},
-    "e": {0: "n", 1: "e", 2: "q", 3: "q.", 4: "h", 5: "h.", 6: "w", 7: "w.", 8: "W"},
-    "s": {
-        0: "n",
-        1: "s",
-        2: "e",
-        3: "e.",
-        4: "q",
-        5: "q.",
-        6: "h",
-        7: "h.",
-        8: "w",
-        9: "w.",
-        10: "W",
-    },
-    "t": {
-        0: "n",
-        1: "t",
-        2: "s",
-        3: "s.",
-        4: "e",
-        5: "e.",
-        6: "q",
-        7: "q.",
-        8: "h",
-        9: "h.",
-        10: "w",
-        11: "w.",
-        12: "W",
-    },
-}
 
 
 class IsChord(Enum):
@@ -206,6 +78,7 @@ class Grid:
         bars: list[int] | None = None,
         tracks: list[int] | None = None,
         count: int = 1,
+        skip_error: bool = False,
     ):
         """
         Copy bars and append to the end, in order, count times, for the tracks specified.
@@ -224,9 +97,14 @@ class Grid:
                 for track in tracks:
                     track_tmp = tmp.get(track)
                     if not track_tmp:
-                        raise TrackIndexGridError(
-                            f"Invalid track index specified: {track}"
-                        )
+                        if skip_error:
+                            continue
+                        raise TrackIndexGridError((
+                            f"Invalid track index specified: bar:{bar} track:{track}. "
+                            "This usually means you specified a bar->track that does not exist. "
+                            "You can specify skip_error=True to skip these errors, but alignment "
+                            "may get off, which often causes dead space."
+                        ))
                     for beat, data in enumerate(track_tmp):
                         for d in data:
                             self.add(
@@ -246,6 +124,42 @@ class Grid:
                                 volume=d["volume"],
                             )
                 next_bar_index += 1
+
+    def add_chord_spread(
+            self,
+            bar: int,
+            tracks: list[int],
+            beat_offset: int,
+            chord: str,
+            octave: int,
+            duration: int = 1,
+            volume: int | None = None,
+            pitchwheel: int | None = None,
+            modwheel: int | None = None,
+            expression: int | None = None,
+            pan: int | None = None,
+            sustain: bool | None = None,
+            reverse: bool = False,
+            random_order: bool = False,
+    ):
+        """Spread a chord out over a few beats"""
+        chord_notes: list[str] = chords.from_shorthand(chord)
+        if random_order:
+            random.shuffle(chord_notes)
+        elif reverse:
+            chord_notes.reverse()
+        beat: int = 0
+        for i in chord_notes:
+            if beat + beat_offset >= self.number_of_beats:
+                beat = 0
+                bar += 1
+            self.add(
+                bars=[bar], tracks=tracks, beats=[beat + beat_offset], value=i,
+                is_chord=IsChord.NO, duration=duration, pan=pan, volume=volume, octave=octave,
+                pitchwheel=pitchwheel, modwheel=modwheel, expression=expression,
+                sustain=sustain
+            )
+            beat += 1
 
     def add(
         self,
@@ -290,12 +204,12 @@ class Grid:
             raise RequiredArgsGridError(
                 "bars, tracks, and beats arguments must be set."
             )
-        if WILDCARD in bars:
+        if ALL in bars:
             bars = list(self.grid.keys())
         for bar in bars:
             if bar not in self.grid:
                 self.grid[bar] = {}
-            if WILDCARD in tracks:
+            if ALL in tracks:
                 tracks = list(self.grid[bar].keys())
             for track in tracks:
                 if track not in self.grid[bar]:
@@ -311,7 +225,7 @@ class Grid:
                             )
                         )
                     # -1 is a wildcard for fill all beats
-                    if beat == WILDCARD:
+                    if beat == ALL:
                         for wildcard in range(self.number_of_beats):
                             if isinstance(duration, list):
                                 duration_tmp = duration[wildcard]
@@ -376,12 +290,12 @@ class Grid:
         if not bars or not tracks or not beats:
             raise RequiredArgsGridError("All args must have a value.")
         # Now copy each bar->track to a new bar at the end
-        if WILDCARD in bars:
+        if ALL in bars:
             bars = list(self.grid.keys())
-        if WILDCARD in beats:
+        if ALL in beats:
             beats = list(range(self.number_of_beats))
         for bar in bars:
-            if WILDCARD in tracks:
+            if ALL in tracks:
                 tracks_list = list(self.grid[bar].keys())
             else:
                 tracks_list = tracks
@@ -413,7 +327,7 @@ class Grid:
                 # Missing bar n or more, insert them
                 for x in range(n, i):
                     if x not in self.grid:
-                        self.add(bars=[x], tracks=[WILDCARD], beats=[WILDCARD])
+                        self.add(bars=[x], tracks=[ALL], beats=[ALL])
         bars_list = sorted(list(self.grid.keys()))
         tracks_list = set()
         for bar in bars_list:
