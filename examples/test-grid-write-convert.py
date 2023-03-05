@@ -5,39 +5,6 @@ from mdcmp.converter import Converter
 from mingus.core import chords
 
 
-def chord_spread(
-        grid: Grid,
-        bar: int,
-        tracks: list[int],
-        beat_offset: int,
-        chord: str,
-        octave: int,
-        reverse: bool = False,
-        random_order: bool = False,
-        duration: int = 1,
-        pan: int | None = None,
-        volume: int | None = None,
-):
-    """Spread a chord out over a few beats"""
-    chord_notes: list[str] = chords.from_shorthand(chord)
-    if random_order:
-        shuffle(chord_notes)
-    elif reverse:
-        chord_notes.reverse()
-    beat: int = 0
-    for n, i in enumerate(chord_notes):
-        if n + beat_offset >= grid.number_of_beats:
-            print("FIXUP")
-            beat = 0
-            bar += 1
-        print('bar:', bar, 'track:', tracks, 'beat:', beat+beat_offset, 'dur:', duration, 'val:', i)
-        grid.add(
-            bars=[bar], tracks=tracks, beats=[beat + beat_offset], value=i,
-            is_chord=IsChord.NO, duration=duration, pan=pan, volume=volume, octave=octave
-        )
-        beat += 1
-
-
 def test4():
     grid = Grid(granularity=Granularity.EIGHTH)
     grid.add(bars=[0, 1, 2, 3], tracks=[0, ], beats=[ALL_ITEMS], value="hat1", duration=1)
@@ -69,8 +36,10 @@ def test4():
             pan=15,
         )
         if value == "Fmaj7":
-            grid.add_chord_spread(bar, [3], 0, "Fmaj7", 5, random_order=True, pan=-20, volume=70)
-            #chord_spread(grid, bar, [3], 0, "Fmaj7", 5, random_order=True, pan=-20, volume=70)
+            grid.add_chord_spread(
+                bar, [3], 0, "Fmaj7", 5, random_order=True, pan=-20, volume=70,
+                stop_on_bar_overflow=True
+            )
 
     grid.copy_to_end(bars=[0, 1, 2, 3], tracks=[0, 1, 2, 3], count=1, strict=False)
     grid.add(bars=[7], tracks=[0, ], beats=[6, 7], value="hat2", duration=1)

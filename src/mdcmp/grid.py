@@ -141,6 +141,7 @@ class Grid:
             sustain: bool | None = None,
             reverse: bool = False,
             random_order: bool = False,
+            stop_on_bar_overflow: bool = False,
     ):
         """Spread a chord out over a few beats"""
         chord_notes: list[str] = chords.from_shorthand(chord)
@@ -151,6 +152,9 @@ class Grid:
         beat: int = 0
         for i in chord_notes:
             if beat + beat_offset >= self.number_of_beats:
+                # Do not overflow the bar (do not create a new bar)
+                if stop_on_bar_overflow:
+                    break
                 beat = 0
                 bar += 1
             self.add(
