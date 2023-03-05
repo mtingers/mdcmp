@@ -5,13 +5,13 @@ from typing import Any
 from midiutil import MIDIFile
 from mingus.core.notes import RangeError
 
-from build.lib.mdcmp.exceptions import PitchNotFoundError
+from .exceptions import PitchNotFoundError
 from .constants import NOTE_TIME_MAP, KNOWN_MDC_FORMAT_VERSIONS, EVENT_MAP
 from .exceptions import (
     MdcInvalidNoteError,
     MdcLineError,
     MdcFormatError,
-    MdcUnknownVersionrror,
+    MdcUnknownVersionError,
     MdcInvalidGranularityError,
     MdcAlignmentError,
 )
@@ -28,7 +28,8 @@ class Converter:
         """
         Args:
             tempo (int): The tempo in BPM (beats per minute).
-            track (int): The track number to start at.
+            track (int): The track number to start at. Useful if midifile_obj is passed around and
+                         mutated elsewhere. Otherwise, ignore this value.
             midifile_obj (midiutil.MIDIFile): A class that encapsulates a MIDI file object.
             mdc_format_version (int): The MDC format version of in the input file.
         """
@@ -107,18 +108,21 @@ class Converter:
             if not pattern.strip():
                 continue
 
-            (
-                pitches,
-                note_types,
-                note_paddings,
-                velocities,
-                volume,
-                pitchwheel,
-                modwheel,
-                expression,
-                sustain,
-                pan
-            ) = pattern.split(",")
+            try:
+                (
+                    pitches,
+                    note_types,
+                    note_paddings,
+                    velocities,
+                    volume,
+                    pitchwheel,
+                    modwheel,
+                    expression,
+                    sustain,
+                    pan
+                ) = pattern.split(",")
+            except ValueError as err:
+                raise Exception(f"Failed to parse pattern (len={len(pattern.split(','))}): {pattern}    err={err}")
             try:
                 pitches = self._split_data(pitches, int)
                 note_types = self._split_data(note_types, str)
@@ -147,8 +151,11 @@ class Converter:
             # Handle events first
             for event_name, value in event_items.items():
                 event_int: int | None = EVENT_MAP.get(event_name, 0)
-                if event_int < 1:
+                if event_int is not None and event_int < 1:
                     continue  # Raise exception?
+                if value in ("n", ):
+                    continue
+                value = int(value)
                 if event_name == "pitchwheel":
                     self.midi.addPitchWheelEvent(self.track, channel, timer, value)
                 else:
@@ -169,6 +176,12 @@ class Converter:
                         velocity = velocities[n]
                     else:
                         velocity = velocities
+                    """
+                    print((
+                        f'self.midi.addNote({self.track}, {channel}, {pitch},'
+                        f'{timer + note_padding}, {note_type}, {velocity})'
+                    ))
+                    """
                     self.midi.addNote(
                         self.track, channel, pitch, timer + note_padding, note_type, velocity
                     )
@@ -177,6 +190,12 @@ class Converter:
                 # All items are a single value and not a list
                 note_type = NOTE_TIME_MAP.get(note_types, 0.0)
                 note_paddings = NOTE_TIME_MAP.get(note_paddings, 0.0)
+                """
+                print((
+                    f'self.midi.addNote({self.track}, {channel}, {pitches},'
+                    f'{timer + note_paddings}, {note_type}, {velocities})'
+                ))
+                """
                 self.midi.addNote(
                     self.track, channel, pitches, timer + note_paddings, note_type, velocities
                 )
@@ -198,7 +217,7 @@ class Converter:
                 _, track_type, granularity, offset, mdata = i.split("|")
             except ValueError:
                 raise MdcFormatError(f"Invalid format on line: {line_num}")
-            patterns = mdata.strip().replace("; ", "").split(";")
+            patterns = mdata.strip().replace("; ", ";").split(";")
             self._convert_patterns_v1(patterns, granularity, track_type, float(offset))
             self.track += 1
 
@@ -221,13 +240,17 @@ class Converter:
         try:
             mdc_version: int = int(data[0])
             if mdc_version not in KNOWN_MDC_FORMAT_VERSIONS:
-                raise MdcUnknownVersionrror(
+                raise MdcUnknownVersionError(
                     f"Unknown mdc format version: {mdc_version}"
                 )
-            elif mdc_version == 1:
-                self._convert_v1(data)
         except ValueError:
             raise MdcFormatError("Invalid header. Is this an mdc file?")
+        if mdc_version == 1:
+            self._convert_v1(data[1:])
+        else:
+            raise MdcUnknownVersionError(
+                f"Unknown mdc format version: {mdc_version}"
+            )
 
     def save(self, path: str):
         """

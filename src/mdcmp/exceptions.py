@@ -22,7 +22,7 @@ class MdcAlignmentError(Exception):
     """The data section lists did not match the length of pitches list"""
 
 
-class MdcUnknownVersionrror(Exception):
+class MdcUnknownVersionError(Exception):
     """The header contained an unsupported version"""
 
 

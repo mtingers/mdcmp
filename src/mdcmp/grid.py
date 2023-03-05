@@ -437,7 +437,7 @@ class Grid:
                 # If the track doesn't exist in this bar, create resting space, zeroed out
                 if track not in self.grid[bar]:
                     for _ in range(self.number_of_beats):
-                        result[track]["data"] += f" 0,{self.granularity},n,0,n,n,n,n,n,n;"
+                        result[track]["data"] += f" 0,{self.granularity},n,0,n,n,n,n,n,n,n;"
                 else:
                     for beat in range(self.number_of_beats):
                         pitches = []
@@ -453,11 +453,11 @@ class Grid:
                         # collect pitches, collect notes, collect offsets, collect velocities
                         if not self.grid[bar][track]:
                             # add rest beat to keep timing alignment
-                            result[track]["data"] += f" 0,{self.granularity},n,0,n,n,n,n,n;"
+                            result[track]["data"] += f" 0,{self.granularity},n,0,n,n,n,n,n,n;"
                             continue
                         if not self.grid[bar][track][beat]:
                             # add rest beat to keep timing alignment
-                            result[track]["data"] += f" 0,{self.granularity},n,0,n,n,n,n,n;"
+                            result[track]["data"] += f" 0,{self.granularity},n,0,n,n,n,n,n,n;"
                             continue
 
                         # self.grid[bar][track][beat][i]["sustain"] = sustain
@@ -473,7 +473,7 @@ class Grid:
                                     "meta"
                                 ] = f"_|instrument|{self.granularity}|0.0|"
                                 pitch = chord_to_midi(j["value"], j["octave"])
-                                if not j["is_chord"]:
+                                if j["is_chord"] == IsChord.NO:
                                     pitches.append(pitch[0])
                                 else:
                                     for p in pitch:
@@ -484,8 +484,8 @@ class Grid:
                             notes.append(duration_tmp)
                             if humanize_jitter:
                                 offsets.append(
-                                    random.choice(["n", "n", "n", "n", "t", "t", "e"])
-                                )  # TODO: not implemented yet
+                                    random.choice(["n", "n", "n", "n", "n", "H", "H", "H", "S"])
+                                )
                             else:
                                 offsets.append("n")
                             jitter = random.randint(-velocity_jitter, velocity_jitter)
