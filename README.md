@@ -1,6 +1,6 @@
 # mdcmp
 
-mdcmp (MIDI Composer) is a Python library for easily generating MIDI songs.
+mdcmp (MIDI Composer) is a Python library for easily generating songs and emitting MIDI files.
 
 **This is a work in progress.**
 
