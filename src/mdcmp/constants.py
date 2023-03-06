@@ -4,6 +4,8 @@ Constants go here.
 ################################################################################
 # These are the supported MDC format versions:
 KNOWN_MDC_FORMAT_VERSIONS = (1,)
+# The latest format version and default for this build:
+FORMAT_VERSION = 1
 ################################################################################
 # Note mappings for translating note names to MIDI timings
 NOTE_TIME_MAP = {

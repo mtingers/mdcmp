@@ -9,7 +9,7 @@ from typing import Any
 import random
 from mingus.core import chords
 from .drummap import DRUMS_R
-from .constants import DURATION_GRANULARITY_MAP, NOTE_TYPE_GRID_QUANTIZE_MAP, ALL
+from .constants import DURATION_GRANULARITY_MAP, NOTE_TYPE_GRID_QUANTIZE_MAP, ALL, FORMAT_VERSION
 from .util import (
     chord_to_midi,
     sustain_toggle,
@@ -463,7 +463,7 @@ class Grid:
                             f"{_compress_mdc_part(sustains, entire_track_event=True)},"
                             f"{_compress_mdc_part(pans, entire_track_event=True)};"
                         )
-        output: str = "1\n"
+        output: str = f"{FORMAT_VERSION}\n"
         for i in result.values():
             output += f"{i['meta']}{i['data']}\n"
         # import pprint

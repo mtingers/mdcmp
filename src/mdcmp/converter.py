@@ -6,7 +6,7 @@ from midiutil import MIDIFile
 from mingus.core.notes import RangeError
 
 from .exceptions import PitchNotFoundError
-from .constants import NOTE_TIME_MAP, KNOWN_MDC_FORMAT_VERSIONS, EVENT_MAP
+from .constants import NOTE_TIME_MAP, KNOWN_MDC_FORMAT_VERSIONS, EVENT_MAP, FORMAT_VERSION
 from .exceptions import (
     MdcInvalidNoteError,
     MdcLineError,
@@ -23,7 +23,7 @@ class Converter:
         tempo: int = 120,
         track: int = 0,
         midifile_obj: MIDIFile | None = None,
-        mdc_format_version: int = 1,
+        mdc_format_version: int = FORMAT_VERSION,
     ):
         """
         Args:
@@ -40,6 +40,8 @@ class Converter:
             if midifile_obj
             else MIDIFile(numTracks=128, deinterleave=False)
         )
+        # Internally track the last time offset
+        self._max_time_offset: float = 0.0
         self.midi.addTempo(0, 0, tempo)
 
     def _split_data(self, data: str, map_type: Any) -> Any:
@@ -55,15 +57,11 @@ class Converter:
         velocities: list[int] | int,
     ):
         # Validate note types
-        if isinstance(note_types, list):
-            for note_type in note_types:
-                if note_type not in NOTE_TIME_MAP.keys():
-                    raise MdcInvalidNoteError(f"Unknown note type: {note_type}")
-        # Validate note_paddings
-        if isinstance(note_paddings, list):
-            for note_padding in note_paddings:
-                if note_padding not in NOTE_TIME_MAP.keys():
-                    raise MdcInvalidNoteError(f"Unknown note extra: {note_padding}")
+        for note_check in (note_types, note_paddings):
+            if isinstance(note_check, list):
+                for note_type in note_check:
+                    if note_type not in NOTE_TIME_MAP.keys():
+                        raise MdcInvalidNoteError(f"Unknown note type: {note_type}")
         # Validate pitches
         if isinstance(pitches, list):
             for pitch in pitches:
@@ -82,8 +80,6 @@ class Converter:
                     )  # TODO
             else:
                 if isinstance(i, list):
-                    print('-'*80)
-                    print(f"p:{pitches} nt:{note_types} pads:{note_paddings} velocities:{velocities} i:{i}")
                     raise MdcAlignmentError(
                         "Invalid data alignment to single pitch."
                     )  # TODO
@@ -221,6 +217,7 @@ class Converter:
                 )
             # Increment the timer according to the grid granularity
             timer += increment
+            self._max_time_offset = max(self._max_time_offset, timer)
 
     def _convert_v1(self, data: list[str]):
         """Version 1 format"""
